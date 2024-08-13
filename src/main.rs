@@ -1,4 +1,4 @@
-use color_manipulator_rust::RGB;
+use color_manipulator_rust::{add, filter_color, get_g, mult, only_b, only_g, only_r, safe_color, scalar, sub, RGB};
 use image::{GenericImageView, ImageBuffer, Rgb};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -25,6 +25,34 @@ struct FinalFileConf {
 
 fn main() -> Result<(), image::ImageError> {
     let mut list_source_file_conf: HashMap<&str, SourceFileConf> = HashMap::new();
+    list_source_file_conf.insert("20230226_201501.jpg", SourceFileConf {
+        files: vec!(
+            FinalFileConf {
+                name: String::from("20230226_201501.jpg"),
+                calculate_color: |c| {
+                    let custom_channel_1 = safe_color(((1.0 - c.b) - 0.5) * 10.0 + 0.5);
+
+                    return add(
+                        mult(
+                            add(
+                                only_g(custom_channel_1 * 0.2),
+                                only_b(custom_channel_1),
+                            ),
+                            scalar(0.85)
+                        ),
+                        only_r(
+                            get_g(
+                                sub(
+                                    filter_color(c, 0.5, 0.7),
+                                    scalar(0.5),
+                                ),
+                            ),
+                        ),
+                    );
+                },
+            },
+        ),
+    });
     list_source_file_conf.insert("20230301_224920.jpg", SourceFileConf {
         files: vec!(
             FinalFileConf {

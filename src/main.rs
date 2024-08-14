@@ -1,5 +1,5 @@
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, POS, RGB};
-use image::{GenericImageView, ImageBuffer, Rgb};
+use image::{GenericImage, GenericImageView, ImageBuffer, Rgb, Rgba};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{fs, io};
@@ -313,7 +313,58 @@ fn main() -> Result<(), image::ImageError> {
         if source_file_conf_opt.is_some() {
             let source_file_conf = source_file_conf_opt.unwrap();
 
-            let img = image::open(&file)?;
+            let mut img = image::open(&file)?;
+
+            if file_path_str == "20231002_103537.jpg" {
+                let width = img.width() as usize;
+                let height = img.height() as usize;
+
+                // Backup image
+                let mut bkp_color_rows = vec!();
+                for y in 0..height {
+                    let mut bkp_color_row = vec!();
+                    for x in 0..width {
+                        let src_color_hex = img.get_pixel(x as u32, y as u32);
+                        bkp_color_row.push(src_color_hex);
+                    }
+                    bkp_color_rows.push(bkp_color_row);
+                }
+
+                // Resized image
+                let mut new_img = ImageBuffer::new(width as u32, width as u32);
+
+                let to_add_on_above = ((width - height) / 2) as usize; // "width" is the new "height".
+                // const toAddOnBelow = width - height - toAddOnAbove;
+
+                // Known data:
+                //   width=4624
+                //   height=3468
+                //   toAddOnAbove=578
+                //   toAddOnBelow=578
+
+                let default_color = Rgba::from([0, 0, 0, 1]);
+                // Above section
+                for y in 0..to_add_on_above { // "width" is the new "height".
+                    for x in 0..width {
+                        new_img.put_pixel(x as u32, y as u32, default_color);
+                    }
+                }
+                // Image section
+                for y in to_add_on_above..(to_add_on_above + height) { // The old "height".
+                    for x in 0..width {
+                        let old_y = y - to_add_on_above;
+                        let old_color = bkp_color_rows[old_y][x];
+                        new_img.put_pixel(x as u32, y as u32, old_color);
+                    }
+                }
+                // Below section
+                for y in to_add_on_above + height..width { // "width" is the new "height".
+                    for x in 0..width {
+                        new_img.put_pixel(x as u32, y as u32, default_color);
+                    }
+                }
+                img = new_img.into();
+            }
 
             for final_file_conf in &source_file_conf.files {
                 let width = img.width();

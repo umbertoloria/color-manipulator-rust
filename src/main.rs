@@ -1,4 +1,4 @@
-use color_manipulator_rust::{add, filter_color, get_g, mult, only_b, only_g, only_r, safe_color, scalar, sub, RGB};
+use color_manipulator_rust::{add, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, RGB};
 use image::{GenericImageView, ImageBuffer, Rgb};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -25,6 +25,7 @@ struct FinalFileConf {
 
 fn main() -> Result<(), image::ImageError> {
     let mut list_source_file_conf: HashMap<&str, SourceFileConf> = HashMap::new();
+
     list_source_file_conf.insert("20230226_201501.jpg", SourceFileConf {
         files: vec!(
             FinalFileConf {
@@ -53,16 +54,84 @@ fn main() -> Result<(), image::ImageError> {
             },
         ),
     });
+
     list_source_file_conf.insert("20230301_224920.jpg", SourceFileConf {
         files: vec!(
             FinalFileConf {
-                name: String::from("output.png"),
+                name: String::from("20230301_224920_1.jpg"),
                 calculate_color: |c| {
-                    return RGB {
-                        r: c.r * 0.5,
-                        g: c.g * 0.5,
-                        b: c.b * 0.5,
-                    };
+                    add(
+                        mult(
+                            scalar(filter_scalar(get_r(c), 0.6, 0.85) - 0.6),
+                            color(
+                                10.0,
+                                5.0,
+                                0.0,
+                            ),
+                        ),
+                        only_b(0.35),
+                    )
+                },
+            },
+            FinalFileConf {
+                name: String::from("20230301_224920_2.jpg"),
+                calculate_color: |c| {
+                    xor_color(
+                        mult(
+                            scalar(0.4 - filter_scalar(get_r(c), 0.35, 0.4)),
+                            color(
+                                7.0,
+                                10.0,
+                                5.0,
+                            ),
+                        ),
+                        only_b(0.35),
+                    )
+                },
+            },
+        ),
+    });
+
+    list_source_file_conf.insert("20230301_225057.jpg", SourceFileConf {
+        files: vec!(
+            FinalFileConf {
+                name: String::from("20230303_162133.jpg"),
+                calculate_color: |c| {
+                    add(
+                        color(
+                            0.0,
+                            0.2,
+                            0.15,
+                        ),
+                        add(
+                            mult(
+                                scalar(filter_scalar_and_stretch(get_b(c), 0.28, 0.39)),
+                                color(
+                                    0.0,
+                                    0.6,
+                                    0.0,
+                                ),
+                            ),
+                            add(
+                                mult(
+                                    scalar(filter_scalar_and_stretch(get_r(c), 0.1, 0.2)),
+                                    color(
+                                        0.001,
+                                        0.025,
+                                        0.008,
+                                    ),
+                                ),
+                                mult(
+                                    scalar(filter_scalar_and_stretch(get_g(c), 0.68, 0.7)),
+                                    color(
+                                        0.6,
+                                        0.8,
+                                        0.01,
+                                    ),
+                                ),
+                            ),
+                        ),
+                    )
                 },
             },
         ),

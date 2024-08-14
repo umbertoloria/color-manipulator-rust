@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct RGB {
     pub r: f32,
     pub g: f32,
@@ -22,6 +23,18 @@ pub fn filter_color(c: RGB, min: f32, max: f32) -> RGB {
         r: filter_scalar(c.r, min, max),
         g: filter_scalar(c.g, min, max),
         b: filter_scalar(c.b, min, max),
+    }
+}
+pub fn filter_scalar_and_stretch(scalar: f32, min: f32, max: f32) -> f32 {
+    (filter_scalar(scalar, min, max) - min) * (1.0 / (max - min))
+}
+
+
+pub fn color(r: f32, g: f32, b: f32) -> RGB {
+    RGB {
+        r,
+        g,
+        b,
     }
 }
 
@@ -78,4 +91,14 @@ pub fn only_b(b: f32) -> RGB {
         b,
     }
 }
+pub fn get_r(c: RGB) -> f32 { c.r }
 pub fn get_g(c: RGB) -> f32 { c.g }
+pub fn get_b(c: RGB) -> f32 { c.b }
+
+pub fn xor_color(a: RGB, b: RGB) -> RGB {
+    color(
+        (a.r - b.r).abs(),
+        (a.g - b.g).abs(),
+        (a.b - b.b).abs(),
+    )
+}

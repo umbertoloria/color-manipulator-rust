@@ -304,6 +304,7 @@ fn main() -> Result<(), image::ImageError> {
 
     let files = get_file_paths("./input");
 
+    println!("Creating images: from sources and configs");
     for file in files {
         let file_path_os_str = file.file_name().unwrap();
         let file_path_string = file_path_os_str.to_string_lossy().to_string();
@@ -408,5 +409,66 @@ fn main() -> Result<(), image::ImageError> {
         }
     }
 
+    println!("Creating images: diff from oracles");
+    create_and_save_diff_image_from_oracle("20230226_201501.jpg");
+    create_and_save_diff_image_from_oracle("20230301_224920_1.jpg");
+    create_and_save_diff_image_from_oracle("20230301_224920_2.jpg");
+    create_and_save_diff_image_from_oracle("20230303_162133.jpg");
+    create_and_save_diff_image_from_oracle("20231002_103537_0.jpg");
+    create_and_save_diff_image_from_oracle("20231002_103537_1.jpg");
+    create_and_save_diff_image_from_oracle("20231002_103537_2.jpg");
+
     Ok(())
+}
+
+fn create_and_save_diff_image_from_oracle(name: &str) -> Option<ImageBuffer<Rgb<u8>, Vec<u8>>> {
+    let img_src = image::open(format!("out/{}", name)).unwrap();
+    let img_dst = image::open(format!("oracle/{}", name)).unwrap();
+
+    let width_src = img_src.width();
+    let height_src = img_src.height();
+    println!("File \"{}\" of dimensions {}x{}", name, width_src, height_src);
+
+    let width_dst = img_dst.width();
+    let height_dst = img_dst.height();
+
+    if width_src != width_dst {
+        println!("Images different in width: {} against {}", width_src, width_dst);
+        return None;
+    }
+    if height_src != height_dst {
+        println!("Images different in height: {} against {}", height_src, height_dst);
+        return None;
+    }
+
+    let mut diff_img = ImageBuffer::new(width_src, height_src);
+
+    for y in 0..height_src {
+        for x in 0..width_src {
+            let color_src = img_src.get_pixel(x, y).0;
+            let color_dst = img_dst.get_pixel(x, y).0;
+
+            let r_src = *(color_src.get(0)?);
+            let r_dsc = *(color_dst.get(0)?);
+            let diff_r = (r_src as i32 - r_dsc as i32).abs() as u8;
+
+            let g_src = *(color_src.get(1)?);
+            let g_dsc = *(color_dst.get(1)?);
+            let diff_g = (g_src as i32 - g_dsc as i32).abs() as u8;
+
+            let b_src = *(color_src.get(2)?);
+            let b_dsc = *(color_dst.get(2)?);
+            let diff_b = (b_src as i32 - b_dsc as i32).abs() as u8;
+
+            diff_img.put_pixel(x, y, Rgb([
+                diff_r,
+                diff_g,
+                diff_b,
+            ]))
+        }
+    }
+
+    diff_img.save(format!("out/oracle_diff/{}", name)).unwrap();
+
+    Some(diff_img)
 }

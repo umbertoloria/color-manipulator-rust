@@ -1,18 +1,18 @@
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, POS, RGB};
-use image::{GenericImage, GenericImageView, ImageBuffer, Rgb, Rgba};
+use image::{GenericImageView, ImageBuffer, Rgb, Rgba};
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
-use std::{fs, io};
 
-fn get_file_paths(dir: &str) -> Result<Vec<PathBuf>, io::Error> {
+fn get_file_paths(dir: &str) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = Vec::new();
-    for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
         if path.is_file() {
             paths.push(path);
         }
     }
-    Ok(paths)
+    paths
 }
 
 struct SourceFileConf {
@@ -302,7 +302,7 @@ fn main() -> Result<(), image::ImageError> {
         ),
     });
 
-    let files = get_file_paths("./input")?;
+    let files = get_file_paths("./input");
 
     for file in files {
         let file_path_os_str = file.file_name().unwrap();
@@ -315,6 +315,7 @@ fn main() -> Result<(), image::ImageError> {
 
             let mut img = image::open(&file)?;
 
+            // + Custom
             if file_path_str == "20231002_103537.jpg" {
                 let width = img.width() as usize;
                 let height = img.height() as usize;
@@ -365,10 +366,13 @@ fn main() -> Result<(), image::ImageError> {
                 }
                 img = new_img.into();
             }
+            // - Custom
 
             for final_file_conf in &source_file_conf.files {
                 let width = img.width();
                 let height = img.height();
+
+                println!("File \"{}\" of dimensions {}x{}", final_file_conf.name, width, height);
 
                 let mut output_img = ImageBuffer::new(width, height);
 

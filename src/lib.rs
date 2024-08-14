@@ -1,4 +1,6 @@
-#[derive(Clone, Copy)]
+use regex::Regex;
+
+#[derive(Clone, Copy, Debug)]
 pub struct RGB {
     pub r: f32,
     pub g: f32,
@@ -36,6 +38,24 @@ pub fn color(r: f32, g: f32, b: f32) -> RGB {
         g,
         b,
     }
+}
+pub fn color_hex(hex: &str) -> RGB {
+    let hex = hex.trim_start_matches('#');
+
+    let re_str = r"^([a-fA-F0-9]{2})([a-fA-F0-9]{2})([a-fA-F0-9]{2})$";
+    let re = Regex::new(re_str).unwrap();
+
+    let caps = re.captures(hex).ok_or("Invalid HEX color").unwrap();
+
+    let r_str = caps.get(1).unwrap().as_str();
+    let g_str = caps.get(2).unwrap().as_str();
+    let b_str = caps.get(3).unwrap().as_str();
+
+    let r = u8::from_str_radix(r_str, 16).unwrap() as f32 / 255.0;
+    let g = u8::from_str_radix(g_str, 16).unwrap() as f32 / 255.0;
+    let b = u8::from_str_radix(b_str, 16).unwrap() as f32 / 255.0;
+
+    RGB { r, g, b }
 }
 
 pub fn add(a: RGB, b: RGB) -> RGB {
@@ -94,6 +114,19 @@ pub fn only_b(b: f32) -> RGB {
 pub fn get_r(c: RGB) -> f32 { c.r }
 pub fn get_g(c: RGB) -> f32 { c.g }
 pub fn get_b(c: RGB) -> f32 { c.b }
+pub fn add_list(c_list: &[Option<RGB>]) -> RGB {
+    let mut r = 0.0;
+    let mut g = 0.0;
+    let mut b = 0.0;
+    for c in c_list {
+        if let Some(rgb) = c {
+            r += rgb.r;
+            g += rgb.g;
+            b += rgb.b;
+        }
+    }
+    RGB { r, g, b }
+}
 
 pub fn xor_color(a: RGB, b: RGB) -> RGB {
     color(
@@ -101,4 +134,21 @@ pub fn xor_color(a: RGB, b: RGB) -> RGB {
         (a.g - b.g).abs(),
         (a.b - b.b).abs(),
     )
+}
+
+/// POSITION
+pub struct POS {
+    pub x: f32,
+    pub y: f32,
+}
+
+pub fn gradient_linear(pos: f32, from: f32, to: f32) -> f32 {
+    let dist_prop = (pos - from) / (to - from);
+    if dist_prop > 1.0 {
+        return 1.0;
+    }
+    if dist_prop < 0.0 {
+        return 0.0;
+    }
+    dist_prop
 }

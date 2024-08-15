@@ -1,5 +1,5 @@
 use crate::RGB;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba};
 
 
 pub trait AbsLayer {
@@ -7,6 +7,7 @@ pub trait AbsLayer {
     fn height(&self) -> usize;
     fn get_color(&self, x: usize, y: usize) -> RGB;
 }
+
 pub struct FileImageLayer {
     image: DynamicImage,
 }
@@ -14,6 +15,18 @@ impl FileImageLayer {
     fn new(path: &str) -> Self {
         let image = image::open(&path).unwrap();
         Self { image }
+    }
+    pub fn exec<F>(&mut self, mut func: F)
+    where
+        F: FnMut(&mut DynamicImage) -> Option<ImageBuffer<Rgba<u8>, Vec<u8>>>,
+    {
+        let result = func(&mut self.image);
+        if let Some(x) = result {
+            self.image = DynamicImage::ImageRgba8(x);
+        }
+    }
+    pub fn get_image(&self) -> &DynamicImage {
+        &self.image
     }
 }
 impl AbsLayer for FileImageLayer {

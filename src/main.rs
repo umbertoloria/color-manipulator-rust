@@ -31,35 +31,6 @@ struct FinalFileConf {
 fn main() -> Result<(), image::ImageError> {
     let mut list_source_file_conf: HashMap<&str, SourceFileConf> = HashMap::new();
 
-    list_source_file_conf.insert("20230226_201501.jpg", SourceFileConf {
-        files: vec!(
-            FinalFileConf {
-                name: String::from("20230226_201501.jpg"),
-                calculate_color: |c, _p| {
-                    let custom_channel_1 = safe_color(((1.0 - c.b) - 0.5) * 10.0 + 0.5);
-
-                    return add(
-                        mult(
-                            add(
-                                only_g(custom_channel_1 * 0.2),
-                                only_b(custom_channel_1),
-                            ),
-                            scalar(0.85)
-                        ),
-                        only_r(
-                            get_g(
-                                sub(
-                                    filter_color(c, 0.5, 0.7),
-                                    scalar(0.5),
-                                ),
-                            ),
-                        ),
-                    );
-                },
-            },
-        ),
-    });
-
     list_source_file_conf.insert("20230301_224920.jpg", SourceFileConf {
         files: vec!(
             FinalFileConf {
@@ -306,6 +277,38 @@ fn main() -> Result<(), image::ImageError> {
             },
         ),
     });
+
+    // 20230226_201501
+    {
+        let layer = load_image_layer("./input/20230226_201501.jpg");
+        let mut layer_box: Box<dyn AbsLayer> = Box::new(layer);
+        let final_file_conf = FinalFileConf {
+            name: String::from("20230226_201501.jpg"),
+            calculate_color: |c, _p| {
+                let custom_channel_1 = safe_color(((1.0 - c.b) - 0.5) * 10.0 + 0.5);
+
+                return add(
+                    mult(
+                        add(
+                            only_g(custom_channel_1 * 0.2),
+                            only_b(custom_channel_1),
+                        ),
+                        scalar(0.85),
+                    ),
+                    only_r(
+                        get_g(
+                            sub(
+                                filter_color(c, 0.5, 0.7),
+                                scalar(0.5),
+                            ),
+                        ),
+                    ),
+                );
+            },
+        };
+        println!("File \"{}\": filtering", final_file_conf.name);
+        create_and_save_filtered_layer(&mut layer_box, &final_file_conf);
+    }
 
     let files = get_file_paths("./input");
 

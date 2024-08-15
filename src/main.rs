@@ -1,8 +1,11 @@
+use crate::layer::{create_diff_layer, load_image_layer};
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, POS, RGB};
-use image::{GenericImageView, ImageBuffer, Rgb, Rgba};
+use image::GenericImageView;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+
+mod layer;
 
 fn get_file_paths(dir: &str) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = Vec::new();
@@ -421,54 +424,12 @@ fn main() -> Result<(), image::ImageError> {
     Ok(())
 }
 
-fn create_and_save_diff_image_from_oracle(name: &str) -> Option<ImageBuffer<Rgb<u8>, Vec<u8>>> {
-    let img_src = image::open(format!("out/{}", name)).unwrap();
-    let img_dst = image::open(format!("oracle/{}", name)).unwrap();
-
-    let width_src = img_src.width();
-    let height_src = img_src.height();
-    println!("File \"{}\" of dimensions {}x{}", name, width_src, height_src);
-
-    let width_dst = img_dst.width();
-    let height_dst = img_dst.height();
-
-    if width_src != width_dst {
-        println!("Images different in width: {} against {}", width_src, width_dst);
-        return None;
-    }
-    if height_src != height_dst {
-        println!("Images different in height: {} against {}", height_src, height_dst);
-        return None;
-    }
-
-    let mut diff_img = ImageBuffer::new(width_src, height_src);
-
-    for y in 0..height_src {
-        for x in 0..width_src {
-            let color_src = img_src.get_pixel(x, y).0;
-            let color_dst = img_dst.get_pixel(x, y).0;
-
-            let r_src = *(color_src.get(0)?);
-            let r_dsc = *(color_dst.get(0)?);
-            let diff_r = (r_src as i32 - r_dsc as i32).abs() as u8;
-
-            let g_src = *(color_src.get(1)?);
-            let g_dsc = *(color_dst.get(1)?);
-            let diff_g = (g_src as i32 - g_dsc as i32).abs() as u8;
-
-            let b_src = *(color_src.get(2)?);
-            let b_dsc = *(color_dst.get(2)?);
-            let diff_b = (b_src as i32 - b_dsc as i32).abs() as u8;
-
-            diff_img.put_pixel(x, y, Rgb([
-                diff_r,
-                diff_g,
-                diff_b,
-            ]))
-        }
-    }
-
-    diff_img.save(format!("out/oracle_diff/{}", name)).unwrap();
-
-    Some(diff_img)
+fn create_and_save_diff_image_from_oracle(name: &str) {
+    let img_src_path = format!("out/{}", name);
+    let img_dst_path = format!("oracle/{}", name);
+    let diff_image_path = format!("out/oracle_diff/{}", name);
+    println!("File \"{}\"", name);
+    create_diff_layer(Box::new(load_image_layer(img_src_path.as_str())),
+                      Box::new(load_image_layer(img_dst_path.as_str())))
+        .save(diff_image_path.as_str());
 }

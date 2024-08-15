@@ -1,7 +1,7 @@
 use crate::folding::{get_path_oracle, get_path_oracle_diff, get_path_out};
-use crate::layer::{create_diff_layer, load_image_layer, AbsLayer};
+use crate::layer::{create_and_save_filtered_layer, create_diff_layer, load_image_layer, AbsLayer};
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, POS, RGB};
-use image::{GenericImageView, ImageBuffer, Rgb, Rgba};
+use image::{GenericImageView, ImageBuffer, Rgba};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -377,43 +377,10 @@ fn main() -> Result<(), image::ImageError> {
             }
             // - Custom
 
-            let img = layer.get_image();
+            let mut layer_box: Box<dyn AbsLayer> = Box::new(layer);
             for final_file_conf in &source_file_conf.files {
-                let width = layer.width();
-                let height = layer.height();
-
-                println!("File \"{}\" of dimensions {}x{}", final_file_conf.name, width, height);
-
-                let mut output_img = ImageBuffer::new(width as u32, height as u32);
-
-                for (x, y, pixel) in img.pixels() {
-                    let src_r = *(pixel.0.get(0).unwrap());
-                    let src_g = *(pixel.0.get(1).unwrap());
-                    let src_b = *(pixel.0.get(2).unwrap());
-
-                    // Calculate color
-                    let in_color = RGB {
-                        r: src_r as f32 / 255.0,
-                        g: src_g as f32 / 255.0,
-                        b: src_b as f32 / 255.0,
-                    };
-                    let in_position = POS {
-                        x: x as f32 / width as f32,
-                        y: y as f32 / height as f32,
-                    };
-                    let final_file_conf_fn = final_file_conf.calculate_color;
-                    let out_color: RGB = final_file_conf_fn(in_color, in_position);
-
-                    // Write destination color
-                    output_img.put_pixel(x, y, Rgb([
-                        (out_color.r * 255.0) as u8,
-                        (out_color.g * 255.0) as u8,
-                        (out_color.b * 255.0) as u8,
-                    ]));
-                }
-
-                let output_file_path = format!("out/{}", final_file_conf.name);
-                output_img.save(output_file_path)?;
+                println!("File \"{}\" of dimensions", final_file_conf.name);
+                create_and_save_filtered_layer(&mut layer_box, final_file_conf);
             }
         }
     }

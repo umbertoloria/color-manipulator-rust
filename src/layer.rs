@@ -1,6 +1,6 @@
-use crate::RGB;
+use crate::{FinalFileConf, RGB};
+use color_manipulator_rust::POS;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba};
-
 
 pub trait AbsLayer {
     fn width(&self) -> usize;
@@ -25,9 +25,9 @@ impl FileImageLayer {
             self.image = DynamicImage::ImageRgba8(x);
         }
     }
-    pub fn get_image(&self) -> &DynamicImage {
+    /*pub fn get_image(&self) -> &DynamicImage {
         &self.image
-    }
+    }*/
 }
 impl AbsLayer for FileImageLayer {
     fn width(&self) -> usize {
@@ -115,4 +115,34 @@ impl AbsLayer for DiffLayer {
 }
 pub fn create_diff_layer(p0: Box<dyn AbsLayer>, p1: Box<dyn AbsLayer>) -> DiffLayer {
     DiffLayer::new(p0, p1)
+}
+
+pub fn create_and_save_filtered_layer(layer: &mut Box<dyn AbsLayer>, final_file_conf: &FinalFileConf) {
+    let width = layer.width();
+    let height = layer.height();
+
+    let mut output_img = ImageBuffer::new(width as u32, height as u32);
+
+    for y in 0..height {
+        for x in 0..width {
+            let in_color = layer.get_color(x, y);
+            let in_position = POS {
+                x: x as f32 / width as f32,
+                y: y as f32 / height as f32,
+            };
+
+            let final_file_conf_fn = final_file_conf.calculate_color;
+            let out_color: RGB = final_file_conf_fn(in_color, in_position);
+
+            // Write destination color
+            output_img.put_pixel(x as u32, y as u32, Rgb([
+                (out_color.r * 255.0) as u8,
+                (out_color.g * 255.0) as u8,
+                (out_color.b * 255.0) as u8,
+            ]));
+        }
+    }
+
+    let output_file_path = format!("out/{}", final_file_conf.name);
+    output_img.save(output_file_path).unwrap();
 }

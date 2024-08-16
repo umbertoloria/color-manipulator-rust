@@ -1,4 +1,5 @@
-use crate::{FinalFileConf, RGB};
+use crate::folding::get_path_out;
+use crate::RGB;
 use color_manipulator_rust::POS;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba};
 
@@ -117,7 +118,11 @@ pub fn create_diff_layer(p0: Box<dyn AbsLayer>, p1: Box<dyn AbsLayer>) -> DiffLa
     DiffLayer::new(p0, p1)
 }
 
-pub fn create_and_save_filtered_layer(layer: &mut Box<dyn AbsLayer>, final_file_conf: &FinalFileConf) {
+pub fn create_and_save_filtered_layer(layer: &Box<dyn AbsLayer>,
+                                      calculate_color_func: fn(c: RGB, p: POS) -> RGB,
+                                      output_file_path: &str) {
+    println!("File \"{}\": filtering", output_file_path);
+
     let width = layer.width();
     let height = layer.height();
 
@@ -131,8 +136,7 @@ pub fn create_and_save_filtered_layer(layer: &mut Box<dyn AbsLayer>, final_file_
                 y: y as f32 / height as f32,
             };
 
-            let final_file_conf_fn = final_file_conf.calculate_color;
-            let out_color: RGB = final_file_conf_fn(in_color, in_position);
+            let out_color: RGB = calculate_color_func(in_color, in_position);
 
             // Write destination color
             output_img.put_pixel(x as u32, y as u32, Rgb([
@@ -143,6 +147,5 @@ pub fn create_and_save_filtered_layer(layer: &mut Box<dyn AbsLayer>, final_file_
         }
     }
 
-    let output_file_path = format!("out/{}", final_file_conf.name);
-    output_img.save(output_file_path).unwrap();
+    output_img.save(get_path_out(output_file_path)).unwrap();
 }

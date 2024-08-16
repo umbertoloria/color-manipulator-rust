@@ -8,9 +8,11 @@ mod folding;
 
 fn main() -> Result<(), image::ImageError> {
     println!("Creating images: from sources and configs");
+
     // 20230226_201501
-    {
-        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230226_201501.jpg")), |c, _p| {
+    create_and_save_filtered_layer(
+        Box::new(load_image_layer("./input/20230226_201501.jpg")),
+        |c, _p| {
             let custom_channel_1 = safe_color(((1.0 - c.b) - 0.5) * 10.0 + 0.5);
 
             return add(
@@ -30,12 +32,14 @@ fn main() -> Result<(), image::ImageError> {
                     ),
                 ),
             );
-        }, "20230226_201501.jpg");
-    }
+        },
+        "20230226_201501.jpg",
+    );
 
     // 20230301_224920
-    {
-        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230301_224920.jpg")), |c, _p| {
+    create_and_save_filtered_layer(
+        Box::new(load_image_layer("./input/20230301_224920.jpg")),
+        |c, _p| {
             add(
                 mult(
                     scalar(filter_scalar(get_r(c), 0.6, 0.85) - 0.6),
@@ -47,10 +51,12 @@ fn main() -> Result<(), image::ImageError> {
                 ),
                 only_b(0.35),
             )
-        }, "20230301_224920_1.jpg");
-    }
-    {
-        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230301_224920.jpg")), |c, _p| {
+        },
+        "20230301_224920_1.jpg",
+    );
+    create_and_save_filtered_layer(
+        Box::new(load_image_layer("./input/20230301_224920.jpg")),
+        |c, _p| {
             xor_color(
                 mult(
                     scalar(0.4 - filter_scalar(get_r(c), 0.35, 0.4)),
@@ -62,12 +68,14 @@ fn main() -> Result<(), image::ImageError> {
                 ),
                 only_b(0.35),
             )
-        }, "20230301_224920_2.jpg");
-    }
+        },
+        "20230301_224920_2.jpg",
+    );
 
     // 20230301_225057
-    {
-        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230301_225057.jpg")), |c, _p| {
+    create_and_save_filtered_layer(
+        Box::new(load_image_layer("./input/20230301_225057.jpg")),
+        |c, _p| {
             add(
                 color(
                     0.0,
@@ -103,8 +111,9 @@ fn main() -> Result<(), image::ImageError> {
                     ),
                 ),
             )
-        }, "20230303_162133.jpg");
-    }
+        },
+        "20230303_162133.jpg",
+    );
 
     // 20231002_103537
     /*let rgb_0_0 = color_hex("#ac7360");
@@ -175,20 +184,24 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        create_and_save_filtered_layer(Box::new(layer), |c, p| {
-            // Known data:
-            //   width=4624
-            //   height=3468
-            //   toAddOnAbove=578
-            //   toAddOnBelow=578
-            let converted_y = p.y * 4624.0;
-            if converted_y < 578.0
-                || converted_y >= (578.0 + 3468.0) {
-                // return rgb_0_0;
-                return RGB { r: 0.6745098, g: 0.4509804, b: 0.3764706 };
-            }
-            return c;
-        }, "20231002_103537_0.jpg");
+        create_and_save_filtered_layer(
+            Box::new(layer),
+            |c, p| {
+                // Known data:
+                //   width=4624
+                //   height=3468
+                //   toAddOnAbove=578
+                //   toAddOnBelow=578
+                let converted_y = p.y * 4624.0;
+                if converted_y < 578.0
+                    || converted_y >= (578.0 + 3468.0) {
+                    // return rgb_0_0;
+                    return RGB { r: 0.6745098, g: 0.4509804, b: 0.3764706 };
+                }
+                return c;
+            },
+            "20231002_103537_0.jpg",
+        );
     }
     {
         let mut layer = load_image_layer("./input/20231002_103537.jpg"); // + Custom
@@ -243,74 +256,78 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        create_and_save_filtered_layer(Box::new(layer), |c, p| {
-            // Known data:
-            //   width=4624
-            //   height=3468
-            //   toAddOnAbove=578
-            //   toAddOnBelow=578
-            let converted_y = p.y * 4624.0;
-            if converted_y < 578.0
-                || converted_y >= (578.0 + 3468.0) {
-                // return rgb_1_1;
-                return RGB { r: 0.29803923, g: 0.42745098, b: 0.14901961 };
-            }
-            return add_list(&[
+        create_and_save_filtered_layer(
+            Box::new(layer),
+            |c, p| {
+                // Known data:
+                //   width=4624
+                //   height=3468
+                //   toAddOnAbove=578
+                //   toAddOnBelow=578
+                let converted_y = p.y * 4624.0;
+                if converted_y < 578.0
+                    || converted_y >= (578.0 + 3468.0) {
+                    // return rgb_1_1;
+                    return RGB { r: 0.29803923, g: 0.42745098, b: 0.14901961 };
+                }
+                return add_list(&[
 
-                // Base
-                // Some(mult(rgb_1_2, scalar(0.10))),
-                Some(mult(RGB { r: 0.03529412, g: 0.28235295, b: 0.21568628 }, scalar(0.10))),
+                    // Base
+                    // Some(mult(rgb_1_2, scalar(0.10))),
+                    Some(mult(RGB { r: 0.03529412, g: 0.28235295, b: 0.21568628 }, scalar(0.10))),
 
-                // Mattoni base
-                // Some(mult(rgb_1_3, scalar(
-                Some(mult(RGB { r: 0.28235295, g: 0.03529412, b: 0.21568628 }, scalar(
-                    (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
-                        - filter_scalar_and_stretch(get_b(c), 0.11, 0.81))
-                        * 0.9 * gradient_linear(p.x, 0.5, 0.0)
-                ))),
-                // Some(mult(rgb_1_4, scalar(
-                Some(mult(RGB { r: 0.03529412, g: 0.21568628, b: 0.28235295 }, scalar(
-                    (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
-                        - filter_scalar_and_stretch(get_b(c), 0.11, 0.81))
-                        * 0.9 * gradient_linear(p.x, 0.5, 1.0)
-                ))),
+                    // Mattoni base
+                    // Some(mult(rgb_1_3, scalar(
+                    Some(mult(RGB { r: 0.28235295, g: 0.03529412, b: 0.21568628 }, scalar(
+                        (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
+                            - filter_scalar_and_stretch(get_b(c), 0.11, 0.81))
+                            * 0.9 * gradient_linear(p.x, 0.5, 0.0)
+                    ))),
+                    // Some(mult(rgb_1_4, scalar(
+                    Some(mult(RGB { r: 0.03529412, g: 0.21568628, b: 0.28235295 }, scalar(
+                        (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
+                            - filter_scalar_and_stretch(get_b(c), 0.11, 0.81))
+                            * 0.9 * gradient_linear(p.x, 0.5, 1.0)
+                    ))),
 
-                // Mattoni luce
-                // Some(mult(rgb_1_5, scalar(
-                Some(mult(RGB { r: 0.08235294, g: 0.63529414, b: 0.40392157 }, scalar(
-                    (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
-                        - filter_scalar_and_stretch(get_g(c), 0.11, 0.81))
-                        * 0.9 * gradient_linear(p.x, 0.0, 0.5)))),
-                // Some(mult(rgb_1_6, scalar(
-                Some(mult(RGB { r: 0.8156863, g: 0.62352943, b: 0.0 }, scalar(
-                    (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
-                        - filter_scalar_and_stretch(get_g(c), 0.11, 0.81))
-                        * 0.9 * gradient_linear(p.x, 1.0, 0.5)))),
+                    // Mattoni luce
+                    // Some(mult(rgb_1_5, scalar(
+                    Some(mult(RGB { r: 0.08235294, g: 0.63529414, b: 0.40392157 }, scalar(
+                        (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
+                            - filter_scalar_and_stretch(get_g(c), 0.11, 0.81))
+                            * 0.9 * gradient_linear(p.x, 0.0, 0.5)))),
+                    // Some(mult(rgb_1_6, scalar(
+                    Some(mult(RGB { r: 0.8156863, g: 0.62352943, b: 0.0 }, scalar(
+                        (filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
+                            - filter_scalar_and_stretch(get_g(c), 0.11, 0.81))
+                            * 0.9 * gradient_linear(p.x, 1.0, 0.5)))),
 
-                // Effetti su mattoni
-                // Some(mult(rgb_1_6, scalar(
-                Some(mult(RGB { r: 0.8156863, g: 0.62352943, b: 0.0 }, scalar(
-                    (filter_scalar_and_stretch(get_g(c), 0.5, 0.6)
-                        - filter_scalar_and_stretch(get_b(c), 0.5, 0.6))
-                        * 0.9))),
+                    // Effetti su mattoni
+                    // Some(mult(rgb_1_6, scalar(
+                    Some(mult(RGB { r: 0.8156863, g: 0.62352943, b: 0.0 }, scalar(
+                        (filter_scalar_and_stretch(get_g(c), 0.5, 0.6)
+                            - filter_scalar_and_stretch(get_b(c), 0.5, 0.6))
+                            * 0.9))),
 
-                // Saracinesca
-                if p.y > 0.68 {
-                    // Some(mult(rgb_1_7, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 2.0)))
-                    Some(mult(RGB { r: 0.54901963, g: 0.27450982, b: 0.08235294 }, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 2.0)))
-                } else { None },
+                    // Saracinesca
+                    if p.y > 0.68 {
+                        // Some(mult(rgb_1_7, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 2.0)))
+                        Some(mult(RGB { r: 0.54901963, g: 0.27450982, b: 0.08235294 }, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 2.0)))
+                    } else { None },
 
-                // Finestre
-                if p.y < 0.65 && p.x < 0.482 {
-                    // Some(mult(rgb_1_6, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.12)))
-                    Some(mult(RGB { r: 0.8156863, g: 0.62352943, b: 0.0 }, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.12)))
-                } else { None },
-                if p.y < 0.65 && p.x > 0.486 {
-                    // Some(mult(rgb_1_5, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.11)))
-                    Some(mult(RGB { r: 0.08235294, g: 0.63529414, b: 0.40392157 }, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.11)))
-                } else { None },
-            ]);
-        }, "20231002_103537_1.jpg");
+                    // Finestre
+                    if p.y < 0.65 && p.x < 0.482 {
+                        // Some(mult(rgb_1_6, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.12)))
+                        Some(mult(RGB { r: 0.8156863, g: 0.62352943, b: 0.0 }, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.12)))
+                    } else { None },
+                    if p.y < 0.65 && p.x > 0.486 {
+                        // Some(mult(rgb_1_5, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.11)))
+                        Some(mult(RGB { r: 0.08235294, g: 0.63529414, b: 0.40392157 }, scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.11)))
+                    } else { None },
+                ]);
+            },
+            "20231002_103537_1.jpg",
+        );
     }
     {
         let mut layer = load_image_layer("./input/20231002_103537.jpg"); // + Custom
@@ -365,61 +382,65 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        create_and_save_filtered_layer(Box::new(layer), |c, p| {
-            // Known data:
-            //   width=4624
-            //   height=3468
-            //   toAddOnAbove=578
-            //   toAddOnBelow=578
-            let converted_y = p.y * 4624.0;
-            if converted_y < 578.0
-                || converted_y >= (578.0 + 3468.0) {
-                // return rgb_2_1;
-                return RGB { r: 0.05490196, g: 0.050980393, b: 0.12156863 };
-            }
-            return add_list(&[
-                // Base
-                // Some(mult(rgb_2_2, scalar(0.02))),
-                Some(mult(RGB { r: 0.8, g: 0.101960786, b: 0.3019608 }, scalar(0.02))),
+        create_and_save_filtered_layer(
+            Box::new(layer),
+            |c, p| {
+                // Known data:
+                //   width=4624
+                //   height=3468
+                //   toAddOnAbove=578
+                //   toAddOnBelow=578
+                let converted_y = p.y * 4624.0;
+                if converted_y < 578.0
+                    || converted_y >= (578.0 + 3468.0) {
+                    // return rgb_2_1;
+                    return RGB { r: 0.05490196, g: 0.050980393, b: 0.12156863 };
+                }
+                return add_list(&[
+                    // Base
+                    // Some(mult(rgb_2_2, scalar(0.02))),
+                    Some(mult(RGB { r: 0.8, g: 0.101960786, b: 0.3019608 }, scalar(0.02))),
 
-                // Mattoni base
-                Some(mult(
-                    scalar((
-                        filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
-                            - filter_scalar_and_stretch(get_b(c), 0.11, 0.81)
-                    ) * 0.6),
-                    // rgb_2_3,
-                    RGB { r: 0.0, g: 0.13333334, b: 0.18431373 },
-                )),
+                    // Mattoni base
+                    Some(mult(
+                        scalar((
+                            filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
+                                - filter_scalar_and_stretch(get_b(c), 0.11, 0.81)
+                        ) * 0.6),
+                        // rgb_2_3,
+                        RGB { r: 0.0, g: 0.13333334, b: 0.18431373 },
+                    )),
 
-                // Mattoni luce
-                Some(mult(
-                    scalar((
-                        filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
-                            - filter_scalar_and_stretch(get_g(c), 0.11, 0.81)
-                    ) * 0.7),
-                    // rgb_2_4,
-                    RGB { r: 0.0, g: 0.09019608, b: 0.28627452 },
-                )),
+                    // Mattoni luce
+                    Some(mult(
+                        scalar((
+                            filter_scalar_and_stretch(get_r(c), 0.11, 0.81)
+                                - filter_scalar_and_stretch(get_g(c), 0.11, 0.81)
+                        ) * 0.7),
+                        // rgb_2_4,
+                        RGB { r: 0.0, g: 0.09019608, b: 0.28627452 },
+                    )),
 
-                // Effetti su mattoni
-                Some(mult(
-                    scalar((
-                        filter_scalar_and_stretch(get_g(c), 0.5, 0.6)
-                            - filter_scalar_and_stretch(get_b(c), 0.5, 0.6)
-                    ) * 0.7),
-                    // rgb_2_2,
-                    RGB { r: 0.8, g: 0.101960786, b: 0.3019608 },
-                )),
+                    // Effetti su mattoni
+                    Some(mult(
+                        scalar((
+                            filter_scalar_and_stretch(get_g(c), 0.5, 0.6)
+                                - filter_scalar_and_stretch(get_b(c), 0.5, 0.6)
+                        ) * 0.7),
+                        // rgb_2_2,
+                        RGB { r: 0.8, g: 0.101960786, b: 0.3019608 },
+                    )),
 
-                // Mensole
-                Some(mult(
-                    scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.23),
-                    // rgb_2_5,
-                    RGB { r: 0.53333336, g: 0.047058824, b: 0.19215687 },
-                )),
-            ]);
-        }, "20231002_103537_2.jpg");
+                    // Mensole
+                    Some(mult(
+                        scalar(filter_scalar_and_stretch(get_g(c), 0.85, 0.95) * 0.23),
+                        // rgb_2_5,
+                        RGB { r: 0.53333336, g: 0.047058824, b: 0.19215687 },
+                    )),
+                ]);
+            },
+            "20231002_103537_2.jpg",
+        );
     }
 
     println!("Creating images: diff from oracles");

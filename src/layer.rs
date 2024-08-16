@@ -9,6 +9,7 @@ pub trait AbsLayer {
     fn get_color(&self, x: usize, y: usize) -> RGB;
 }
 
+// File Image Layer
 pub struct FileImageLayer {
     image: DynamicImage,
 }
@@ -118,34 +119,52 @@ pub fn create_diff_layer(p0: Box<dyn AbsLayer>, p1: Box<dyn AbsLayer>) -> DiffLa
     DiffLayer::new(p0, p1)
 }
 
+// Filtered Layer
+pub struct FilteredLayer {
+    layer: Box<dyn AbsLayer>,
+    calculate_color_func: fn(c: RGB, p: POS) -> RGB,
+}
+impl FilteredLayer {
+    fn new(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Self {
+        Self { layer, calculate_color_func }
+    }
+    fn save(&self, output_file_path: &str) {
+        println!("File \"{}\": filtering", output_file_path);
+
+        let width = self.layer.width();
+        let height = self.layer.height();
+        let calculate_color_func = self.calculate_color_func;
+
+        let mut output_img = ImageBuffer::new(width as u32, height as u32);
+
+        for y in 0..height {
+            for x in 0..width {
+                let in_color = self.layer.get_color(x, y);
+                let in_position = POS {
+                    x: x as f32 / width as f32,
+                    y: y as f32 / height as f32,
+                };
+
+                let out_color: RGB = calculate_color_func(in_color, in_position);
+
+                // Write destination color
+                output_img.put_pixel(x as u32, y as u32, Rgb([
+                    (out_color.r * 255.0) as u8,
+                    (out_color.g * 255.0) as u8,
+                    (out_color.b * 255.0) as u8,
+                ]));
+            }
+        }
+
+        output_img.save(get_path_out(output_file_path)).unwrap();
+    }
+}
+pub fn create_filtered_layer(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> FilteredLayer {
+    FilteredLayer::new(layer, calculate_color_func)
+}
 pub fn create_and_save_filtered_layer(layer: Box<dyn AbsLayer>,
                                       calculate_color_func: fn(c: RGB, p: POS) -> RGB,
                                       output_file_path: &str) {
-    println!("File \"{}\": filtering", output_file_path);
-
-    let width = layer.width();
-    let height = layer.height();
-
-    let mut output_img = ImageBuffer::new(width as u32, height as u32);
-
-    for y in 0..height {
-        for x in 0..width {
-            let in_color = layer.get_color(x, y);
-            let in_position = POS {
-                x: x as f32 / width as f32,
-                y: y as f32 / height as f32,
-            };
-
-            let out_color: RGB = calculate_color_func(in_color, in_position);
-
-            // Write destination color
-            output_img.put_pixel(x as u32, y as u32, Rgb([
-                (out_color.r * 255.0) as u8,
-                (out_color.g * 255.0) as u8,
-                (out_color.b * 255.0) as u8,
-            ]));
-        }
-    }
-
-    output_img.save(get_path_out(output_file_path)).unwrap();
+    create_filtered_layer(layer, calculate_color_func)
+        .save(output_file_path);
 }

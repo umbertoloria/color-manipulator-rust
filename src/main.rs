@@ -115,23 +115,12 @@ fn main() -> Result<(), image::ImageError> {
         .save("20230303_162133.jpg");
 
     // 20231002_103537
-    /*{
+    /* {
         let mut layer = load_image_layer("./input/20231002_103537.jpg");
         // + Custom
         layer.exec(|img| {
             let width = img.width() as usize;
             let height = img.height() as usize;
-
-            // Backup image
-            let mut bkp_color_rows = vec!();
-            for y in 0..height {
-                let mut bkp_color_row = vec!();
-                for x in 0..width {
-                    let src_color_hex = img.get_pixel(x as u32, y as u32);
-                    bkp_color_row.push(src_color_hex);
-                }
-                bkp_color_rows.push(bkp_color_row);
-            }
 
             // Resized image
             let mut new_img = ImageBuffer::new(width as u32, width as u32);
@@ -156,9 +145,7 @@ fn main() -> Result<(), image::ImageError> {
             for y in to_add_on_above..(to_add_on_above + height) { // The old "height".
                 for x in 0..width {
                     let old_y = y - to_add_on_above;
-                    let old_color = bkp_color_rows[old_y][x];
-                    /* let src_color_hex = img.get_pixel(x as u32, y as u32);
-                    bkp_color_row.push(src_color_hex); */
+                    let old_color = img.get_pixel(x as u32, old_y as u32);
                     new_img.put_pixel(x as u32, y as u32, old_color);
                 }
             }
@@ -176,7 +163,7 @@ fn main() -> Result<(), image::ImageError> {
             |c, _p| { c },
         )
             .save("20231002_103537_resized.jpg");
-    }*/
+    } */
     /*let rgb_0_0 = color_hex("#ac7360");
     let rgb_1_1 = color_hex("#4c6d26");
     let rgb_1_2 = color_hex("#094837");

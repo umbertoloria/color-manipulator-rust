@@ -1,7 +1,7 @@
 use crate::folding::get_path_out;
 use crate::RGB;
 use color_manipulator_rust::POS;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
 
 pub trait AbsLayer {
     fn width(&self) -> usize;
@@ -18,7 +18,7 @@ impl FileImageLayer {
         let image = image::open(&path).unwrap();
         Self { image }
     }
-    pub fn exec<F>(&mut self, mut func: F)
+    /* pub fn exec<F>(&mut self, mut func: F)
     where
         F: FnMut(&mut DynamicImage) -> Option<ImageBuffer<Rgba<u8>, Vec<u8>>>,
     {
@@ -26,10 +26,10 @@ impl FileImageLayer {
         if let Some(x) = result {
             self.image = DynamicImage::ImageRgba8(x);
         }
-    }
-    /*pub fn get_image(&self) -> &DynamicImage {
+    } */
+    /* pub fn get_image(&self) -> &DynamicImage {
         &self.image
-    }*/
+    } */
 }
 impl AbsLayer for FileImageLayer {
     fn width(&self) -> usize {

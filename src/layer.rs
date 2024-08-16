@@ -128,7 +128,7 @@ impl FilteredLayer {
     fn new(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Self {
         Self { layer, calculate_color_func }
     }
-    fn save(&self, output_file_path: &str) {
+    pub fn save(&self, output_file_path: &str) {
         println!("File \"{}\": filtering", output_file_path);
 
         let width = self.layer.width();
@@ -161,10 +161,4 @@ impl FilteredLayer {
 }
 pub fn create_filtered_layer(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> FilteredLayer {
     FilteredLayer::new(layer, calculate_color_func)
-}
-pub fn create_and_save_filtered_layer(layer: Box<dyn AbsLayer>,
-                                      calculate_color_func: fn(c: RGB, p: POS) -> RGB,
-                                      output_file_path: &str) {
-    create_filtered_layer(layer, calculate_color_func)
-        .save(output_file_path);
 }

@@ -1,5 +1,5 @@
 use crate::folding::{get_path_oracle, get_path_oracle_diff, get_path_out};
-use crate::layer::{create_and_save_filtered_layer, create_diff_layer, load_image_layer};
+use crate::layer::{create_diff_layer, create_filtered_layer, load_image_layer};
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, RGB};
 use image::{GenericImageView, ImageBuffer, Rgba};
 
@@ -10,7 +10,7 @@ fn main() -> Result<(), image::ImageError> {
     println!("Creating images: from sources and configs");
 
     // 20230226_201501
-    create_and_save_filtered_layer(
+    create_filtered_layer(
         Box::new(load_image_layer("./input/20230226_201501.jpg")),
         |c, _p| {
             let custom_channel_1 = safe_color(((1.0 - c.b) - 0.5) * 10.0 + 0.5);
@@ -33,11 +33,11 @@ fn main() -> Result<(), image::ImageError> {
                 ),
             );
         },
-        "20230226_201501.jpg",
-    );
+    )
+        .save("20230226_201501.jpg");
 
     // 20230301_224920
-    create_and_save_filtered_layer(
+    create_filtered_layer(
         Box::new(load_image_layer("./input/20230301_224920.jpg")),
         |c, _p| {
             add(
@@ -52,9 +52,9 @@ fn main() -> Result<(), image::ImageError> {
                 only_b(0.35),
             )
         },
-        "20230301_224920_1.jpg",
-    );
-    create_and_save_filtered_layer(
+    )
+        .save("20230301_224920_1.jpg");
+    create_filtered_layer(
         Box::new(load_image_layer("./input/20230301_224920.jpg")),
         |c, _p| {
             xor_color(
@@ -69,11 +69,11 @@ fn main() -> Result<(), image::ImageError> {
                 only_b(0.35),
             )
         },
-        "20230301_224920_2.jpg",
-    );
+    )
+        .save("20230301_224920_2.jpg");
 
     // 20230301_225057
-    create_and_save_filtered_layer(
+    create_filtered_layer(
         Box::new(load_image_layer("./input/20230301_225057.jpg")),
         |c, _p| {
             add(
@@ -112,8 +112,8 @@ fn main() -> Result<(), image::ImageError> {
                 ),
             )
         },
-        "20230303_162133.jpg",
-    );
+    )
+        .save("20230303_162133.jpg");
 
     // 20231002_103537
     /*let rgb_0_0 = color_hex("#ac7360");
@@ -184,7 +184,7 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        create_and_save_filtered_layer(
+        create_filtered_layer(
             Box::new(layer),
             |c, p| {
                 // Known data:
@@ -200,8 +200,8 @@ fn main() -> Result<(), image::ImageError> {
                 }
                 return c;
             },
-            "20231002_103537_0.jpg",
-        );
+        )
+            .save("20231002_103537_0.jpg");
     }
     {
         let mut layer = load_image_layer("./input/20231002_103537.jpg"); // + Custom
@@ -256,7 +256,7 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        create_and_save_filtered_layer(
+        create_filtered_layer(
             Box::new(layer),
             |c, p| {
                 // Known data:
@@ -326,8 +326,8 @@ fn main() -> Result<(), image::ImageError> {
                     } else { None },
                 ]);
             },
-            "20231002_103537_1.jpg",
-        );
+        )
+            .save("20231002_103537_1.jpg");
     }
     {
         let mut layer = load_image_layer("./input/20231002_103537.jpg"); // + Custom
@@ -382,7 +382,7 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        create_and_save_filtered_layer(
+        create_filtered_layer(
             Box::new(layer),
             |c, p| {
                 // Known data:
@@ -439,8 +439,8 @@ fn main() -> Result<(), image::ImageError> {
                     )),
                 ]);
             },
-            "20231002_103537_2.jpg",
-        );
+        )
+            .save("20231002_103537_2.jpg");
     }
 
     println!("Creating images: diff from oracles");
@@ -457,7 +457,9 @@ fn main() -> Result<(), image::ImageError> {
 
 fn create_and_save_diff_image_from_oracle(name: &str) {
     println!("File \"{}\"", name);
-    create_diff_layer(Box::new(load_image_layer(get_path_out(name).as_str())),
-                      Box::new(load_image_layer(get_path_oracle(name).as_str())))
+    create_diff_layer(
+        Box::new(load_image_layer(get_path_out(name).as_str())),
+        Box::new(load_image_layer(get_path_oracle(name).as_str())),
+    )
         .save(get_path_oracle_diff(name).as_str());
 }

@@ -118,7 +118,7 @@ pub fn create_diff_layer(p0: Box<dyn AbsLayer>, p1: Box<dyn AbsLayer>) -> DiffLa
     DiffLayer::new(p0, p1)
 }
 
-pub fn create_and_save_filtered_layer(layer: &Box<dyn AbsLayer>,
+pub fn create_and_save_filtered_layer(layer: Box<dyn AbsLayer>,
                                       calculate_color_func: fn(c: RGB, p: POS) -> RGB,
                                       output_file_path: &str) {
     println!("File \"{}\": filtering", output_file_path);

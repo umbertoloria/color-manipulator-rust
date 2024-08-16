@@ -1,5 +1,5 @@
 use crate::folding::{get_path_oracle, get_path_oracle_diff, get_path_out};
-use crate::layer::{create_and_save_filtered_layer, create_diff_layer, load_image_layer, AbsLayer};
+use crate::layer::{create_and_save_filtered_layer, create_diff_layer, load_image_layer};
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, RGB};
 use image::{GenericImageView, ImageBuffer, Rgba};
 
@@ -10,9 +10,7 @@ fn main() -> Result<(), image::ImageError> {
     println!("Creating images: from sources and configs");
     // 20230226_201501
     {
-        let layer = load_image_layer("./input/20230226_201501.jpg");
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, _p| {
+        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230226_201501.jpg")), |c, _p| {
             let custom_channel_1 = safe_color(((1.0 - c.b) - 0.5) * 10.0 + 0.5);
 
             return add(
@@ -37,9 +35,7 @@ fn main() -> Result<(), image::ImageError> {
 
     // 20230301_224920
     {
-        let layer = load_image_layer("./input/20230301_224920.jpg");
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, _p| {
+        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230301_224920.jpg")), |c, _p| {
             add(
                 mult(
                     scalar(filter_scalar(get_r(c), 0.6, 0.85) - 0.6),
@@ -54,9 +50,7 @@ fn main() -> Result<(), image::ImageError> {
         }, "20230301_224920_1.jpg");
     }
     {
-        let layer = load_image_layer("./input/20230301_224920.jpg");
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, _p| {
+        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230301_224920.jpg")), |c, _p| {
             xor_color(
                 mult(
                     scalar(0.4 - filter_scalar(get_r(c), 0.35, 0.4)),
@@ -73,9 +67,7 @@ fn main() -> Result<(), image::ImageError> {
 
     // 20230301_225057
     {
-        let layer = load_image_layer("./input/20230301_225057.jpg");
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, _p| {
+        create_and_save_filtered_layer(Box::new(load_image_layer("./input/20230301_225057.jpg")), |c, _p| {
             add(
                 color(
                     0.0,
@@ -183,8 +175,7 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, p| {
+        create_and_save_filtered_layer(Box::new(layer), |c, p| {
             // Known data:
             //   width=4624
             //   height=3468
@@ -252,8 +243,7 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, p| {
+        create_and_save_filtered_layer(Box::new(layer), |c, p| {
             // Known data:
             //   width=4624
             //   height=3468
@@ -375,8 +365,7 @@ fn main() -> Result<(), image::ImageError> {
             Some(new_img)
         });
         // - Custom
-        let layer_box: Box<dyn AbsLayer> = Box::new(layer);
-        create_and_save_filtered_layer(&layer_box, |c, p| {
+        create_and_save_filtered_layer(Box::new(layer), |c, p| {
             // Known data:
             //   width=4624
             //   height=3468

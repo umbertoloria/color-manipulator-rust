@@ -5,10 +5,7 @@ use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, 
 mod layer;
 mod folding;
 
-fn main() -> Result<(), image::ImageError> {
-    println!("Creating images: from sources and configs");
-
-    // 20230226_201501
+fn img_20230226_201501() {
     create_filtered_layer(
         Box::new(load_image_layer("./input/20230226_201501.jpg")),
         |c, _p| {
@@ -34,8 +31,8 @@ fn main() -> Result<(), image::ImageError> {
         },
     )
         .save("20230226_201501.jpg");
-
-    // 20230301_224920
+}
+fn img_20230301_224920_two_images() {
     create_filtered_layer(
         Box::new(load_image_layer("./input/20230301_224920.jpg")),
         |c, _p| {
@@ -70,8 +67,8 @@ fn main() -> Result<(), image::ImageError> {
         },
     )
         .save("20230301_224920_2.jpg");
-
-    // 20230301_225057
+}
+fn img_20230301_225057() {
     create_filtered_layer(
         Box::new(load_image_layer("./input/20230301_225057.jpg")),
         |c, _p| {
@@ -113,8 +110,8 @@ fn main() -> Result<(), image::ImageError> {
         },
     )
         .save("20230303_162133.jpg");
-
-    // 20231002_103537
+}
+fn img_20231002_103537_three_images() {
     /* {
         let mut layer = load_image_layer("./input/20231002_103537.jpg");
         // + Custom
@@ -327,7 +324,21 @@ fn main() -> Result<(), image::ImageError> {
         },
     )
         .save("20231002_103537_2.jpg");
+}
 
+fn main() -> Result<(), image::ImageError> {
+    println!("Creating images: from sources and configs");
+
+    img_20230226_201501();
+    img_20230301_224920_two_images();
+    img_20230301_225057();
+    img_20231002_103537_three_images();
+
+    // create_diff_images();
+    Ok(())
+}
+
+fn create_diff_images() {
     println!("Creating images: diff from oracles");
     create_and_save_diff_image_from_oracle("20230226_201501.jpg");
     create_and_save_diff_image_from_oracle("20230301_224920_1.jpg");
@@ -336,10 +347,7 @@ fn main() -> Result<(), image::ImageError> {
     create_and_save_diff_image_from_oracle("20231002_103537_0.jpg");
     create_and_save_diff_image_from_oracle("20231002_103537_1.jpg");
     create_and_save_diff_image_from_oracle("20231002_103537_2.jpg");
-
-    Ok(())
 }
-
 fn create_and_save_diff_image_from_oracle(name: &str) {
     println!("File \"{}\"", name);
     create_diff_layer(

@@ -1,5 +1,5 @@
 use crate::folding::{get_path_oracle, get_path_oracle_diff, get_path_out};
-use crate::layer::{create_diff_layer, create_filtered_layer, load_image_layer};
+use crate::layer::{create_diff_layer, create_filtered_layer, load_image_layer, AbsLayer};
 use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, only_b, only_g, only_r, safe_color, scalar, sub, xor_color, RGB};
 
 mod layer;

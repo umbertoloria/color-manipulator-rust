@@ -8,6 +8,31 @@ pub trait AbsLayer {
     fn height(&self) -> usize;
     fn get_color(&self, x: usize, y: usize) -> RGB;
 }
+impl dyn AbsLayer {
+    pub fn save(&self, output_file_path: &str) {
+        println!("File \"{}\": saving in", output_file_path);
+
+        let width = self.width();
+        let height = self.height();
+
+        let mut output_img = ImageBuffer::new(width as u32, height as u32);
+
+        for y in 0..height {
+            for x in 0..width {
+                let out_color: RGB = self.get_color(x, y);
+
+                // Write destination color
+                output_img.put_pixel(x as u32, y as u32, Rgb([
+                    (out_color.r * 255.0) as u8,
+                    (out_color.g * 255.0) as u8,
+                    (out_color.b * 255.0) as u8,
+                ]));
+            }
+        }
+
+        output_img.save(get_path_out(output_file_path)).unwrap();
+    }
+}
 
 // File Image Layer
 pub struct FileImageLayer {
@@ -128,37 +153,27 @@ impl FilteredLayer {
     fn new(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Self {
         Self { layer, calculate_color_func }
     }
-    pub fn save(&self, output_file_path: &str) {
-        println!("File \"{}\": filtering", output_file_path);
-
+}
+impl AbsLayer for FilteredLayer {
+    fn width(&self) -> usize {
+        self.layer.width()
+    }
+    fn height(&self) -> usize {
+        self.layer.height()
+    }
+    fn get_color(&self, x: usize, y: usize) -> RGB {
         let width = self.layer.width();
         let height = self.layer.height();
-        let calculate_color_func = self.calculate_color_func;
 
-        let mut output_img = ImageBuffer::new(width as u32, height as u32);
+        let in_color = self.layer.get_color(x, y);
+        let in_position = POS {
+            x: x as f32 / width as f32,
+            y: y as f32 / height as f32,
+        };
 
-        for y in 0..height {
-            for x in 0..width {
-                let in_color = self.layer.get_color(x, y);
-                let in_position = POS {
-                    x: x as f32 / width as f32,
-                    y: y as f32 / height as f32,
-                };
-
-                let out_color: RGB = calculate_color_func(in_color, in_position);
-
-                // Write destination color
-                output_img.put_pixel(x as u32, y as u32, Rgb([
-                    (out_color.r * 255.0) as u8,
-                    (out_color.g * 255.0) as u8,
-                    (out_color.b * 255.0) as u8,
-                ]));
-            }
-        }
-
-        output_img.save(get_path_out(output_file_path)).unwrap();
+        (self.calculate_color_func)(in_color, in_position)
     }
 }
-pub fn create_filtered_layer(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> FilteredLayer {
-    FilteredLayer::new(layer, calculate_color_func)
+pub fn create_filtered_layer(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Box<dyn AbsLayer> {
+    Box::new(FilteredLayer::new(layer, calculate_color_func))
 }

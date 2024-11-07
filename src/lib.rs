@@ -137,6 +137,7 @@ pub fn xor_color(a: RGB, b: RGB) -> RGB {
 }
 
 /// POSITION
+#[derive(Clone, Copy)]
 pub struct POS {
     pub x: f32,
     pub y: f32,
@@ -151,4 +152,31 @@ pub fn gradient_linear(pos: f32, from: f32, to: f32) -> f32 {
         return 0.0;
     }
     dist_prop
+}
+
+pub fn white() -> RGB {
+    scalar(1.0)
+}
+pub fn black() -> RGB {
+    scalar(0.0)
+}
+pub fn zero_but_one_in_square(pos: POS, top_left: POS, bottom_right: POS) -> f32 {
+    if top_left.x <= pos.x && pos.x < bottom_right.x
+        && top_left.y <= pos.y && pos.y < bottom_right.y {
+        1.0
+    } else {
+        0.0
+    }
+}
+pub fn get_distance(pos: POS, center: POS) -> f32 {
+    let diff_x = pos.x - center.x;
+    let diff_y = pos.y - center.y;
+    f32::sqrt(diff_x * diff_x + diff_y * diff_y)
+}
+pub fn zero_but_one_in_circle(pos: POS, center: POS, radius: f32) -> f32 {
+    if get_distance(pos, center) <= radius {
+        1.0
+    } else {
+        0.0
+    }
 }

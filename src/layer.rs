@@ -177,3 +177,31 @@ impl AbsLayer for FilteredLayer {
 pub fn create_filtered_layer(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Box<dyn AbsLayer> {
     Box::new(FilteredLayer::new(layer, calculate_color_func))
 }
+
+// Extracted Layer
+pub struct ExtractedLayer {
+    layer: Box<dyn AbsLayer>,
+    top_left_x: usize,
+    top_left_y: usize,
+    bottom_right_x: usize,
+    bottom_right_y: usize,
+}
+impl ExtractedLayer {
+    fn new(layer: Box<dyn AbsLayer>, top_left_x: usize, top_left_y: usize, bottom_right_x: usize, bottom_right_y: usize) -> Self {
+        Self { layer, top_left_x, top_left_y, bottom_right_x, bottom_right_y }
+    }
+}
+impl AbsLayer for ExtractedLayer {
+    fn width(&self) -> usize {
+        self.bottom_right_x - self.top_left_x
+    }
+    fn height(&self) -> usize {
+        self.bottom_right_y - self.top_left_y
+    }
+    fn get_color(&self, x: usize, y: usize) -> RGB {
+        self.layer.get_color(self.top_left_x + x, self.top_left_y + y)
+    }
+}
+pub fn extract_from_layer(layer: Box<dyn AbsLayer>, top_left_x: usize, top_left_y: usize, bottom_right_x: usize, bottom_right_y: usize) -> Box<dyn AbsLayer> {
+    Box::new(ExtractedLayer::new(layer, top_left_x, top_left_y, bottom_right_x, bottom_right_y))
+}

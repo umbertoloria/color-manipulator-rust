@@ -80,7 +80,8 @@ impl DiffLayer {
     pub fn save(&self, path: &str) {
         let width = self.width();
         let height = self.height();
-        let mut output_img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(width as u32, height as u32);
+        let mut output_img: ImageBuffer<Rgb<u8>, Vec<u8>> =
+            ImageBuffer::new(width as u32, height as u32);
         for y in 0..height {
             for x in 0..width {
                 let out_color = self.get_color(x, y);
@@ -93,15 +94,7 @@ impl DiffLayer {
                 let int_g8 = int_g as u8;
                 let int_b8 = int_b as u8;
 
-                output_img.put_pixel(
-                    x as u32,
-                    y as u32,
-                    Rgb([
-                        int_r8,
-                        int_g8,
-                        int_b8,
-                    ]),
-                )
+                output_img.put_pixel(x as u32, y as u32, Rgb([int_r8, int_g8, int_b8]))
             }
         }
         output_img.save(path).unwrap();
@@ -140,7 +133,10 @@ pub struct FilteredLayer {
 }
 impl FilteredLayer {
     fn new(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Self {
-        Self { layer, calculate_color_func }
+        Self {
+            layer,
+            calculate_color_func,
+        }
     }
 }
 impl AbsLayer for FilteredLayer {
@@ -163,7 +159,10 @@ impl AbsLayer for FilteredLayer {
         (self.calculate_color_func)(in_color, in_position)
     }
 }
-pub fn create_filtered_layer(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Box<dyn AbsLayer> {
+pub fn create_filtered_layer(
+    layer: Box<dyn AbsLayer>,
+    calculate_color_func: fn(c: RGB, p: POS) -> RGB,
+) -> Box<dyn AbsLayer> {
     Box::new(FilteredLayer::new(layer, calculate_color_func))
 }
 
@@ -176,8 +175,20 @@ pub struct ExtractedLayer {
     bottom_right_y: usize,
 }
 impl ExtractedLayer {
-    fn new(layer: Box<dyn AbsLayer>, top_left_x: usize, top_left_y: usize, bottom_right_x: usize, bottom_right_y: usize) -> Self {
-        Self { layer, top_left_x, top_left_y, bottom_right_x, bottom_right_y }
+    fn new(
+        layer: Box<dyn AbsLayer>,
+        top_left_x: usize,
+        top_left_y: usize,
+        bottom_right_x: usize,
+        bottom_right_y: usize,
+    ) -> Self {
+        Self {
+            layer,
+            top_left_x,
+            top_left_y,
+            bottom_right_x,
+            bottom_right_y,
+        }
     }
 }
 impl AbsLayer for ExtractedLayer {
@@ -188,9 +199,22 @@ impl AbsLayer for ExtractedLayer {
         self.bottom_right_y - self.top_left_y
     }
     fn get_color(&self, x: usize, y: usize) -> RGB {
-        self.layer.get_color(self.top_left_x + x, self.top_left_y + y)
+        self.layer
+            .get_color(self.top_left_x + x, self.top_left_y + y)
     }
 }
-pub fn extract_from_layer(layer: Box<dyn AbsLayer>, top_left_x: usize, top_left_y: usize, bottom_right_x: usize, bottom_right_y: usize) -> Box<dyn AbsLayer> {
-    Box::new(ExtractedLayer::new(layer, top_left_x, top_left_y, bottom_right_x, bottom_right_y))
+pub fn extract_from_layer(
+    layer: Box<dyn AbsLayer>,
+    top_left_x: usize,
+    top_left_y: usize,
+    bottom_right_x: usize,
+    bottom_right_y: usize,
+) -> Box<dyn AbsLayer> {
+    Box::new(ExtractedLayer::new(
+        layer,
+        top_left_x,
+        top_left_y,
+        bottom_right_x,
+        bottom_right_y,
+    ))
 }

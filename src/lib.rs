@@ -7,7 +7,9 @@ pub struct RGB {
     pub b: f32,
 }
 
-pub fn safe_color(c: f32) -> f32 { filter_scalar(c, 0.0, 255.0) }
+pub fn safe_color(c: f32) -> f32 {
+    filter_scalar(c, 0.0, 255.0)
+}
 
 pub fn filter_scalar(scalar: f32, min: f32, max: f32) -> f32 {
     if scalar < min {
@@ -31,13 +33,8 @@ pub fn filter_scalar_and_stretch(scalar: f32, min: f32, max: f32) -> f32 {
     (filter_scalar(scalar, min, max) - min) * (1.0 / (max - min))
 }
 
-
 pub fn color(r: f32, g: f32, b: f32) -> RGB {
-    RGB {
-        r,
-        g,
-        b,
-    }
+    RGB { r, g, b }
 }
 pub fn color_hex(hex: &str) -> RGB {
     let hex = hex.trim_start_matches('#');
@@ -66,11 +63,14 @@ pub fn add(a: RGB, b: RGB) -> RGB {
     }
 }
 pub fn sub(a: RGB, b: RGB) -> RGB {
-    add(a, RGB {
-        r: -b.r,
-        g: -b.g,
-        b: -b.b,
-    })
+    add(
+        a,
+        RGB {
+            r: -b.r,
+            g: -b.g,
+            b: -b.b,
+        },
+    )
 }
 
 pub fn mult(a: RGB, b: RGB) -> RGB {
@@ -89,31 +89,24 @@ pub fn scalar(scalar: f32) -> RGB {
     }
 }
 
-
 pub fn only_r(r: f32) -> RGB {
-    RGB {
-        r,
-        g: 0.0,
-        b: 0.0,
-    }
+    RGB { r, g: 0.0, b: 0.0 }
 }
 pub fn only_g(g: f32) -> RGB {
-    RGB {
-        r: 0.0,
-        g,
-        b: 0.0,
-    }
+    RGB { r: 0.0, g, b: 0.0 }
 }
 pub fn only_b(b: f32) -> RGB {
-    RGB {
-        r: 0.0,
-        g: 0.0,
-        b,
-    }
+    RGB { r: 0.0, g: 0.0, b }
 }
-pub fn get_r(c: RGB) -> f32 { c.r }
-pub fn get_g(c: RGB) -> f32 { c.g }
-pub fn get_b(c: RGB) -> f32 { c.b }
+pub fn get_r(c: RGB) -> f32 {
+    c.r
+}
+pub fn get_g(c: RGB) -> f32 {
+    c.g
+}
+pub fn get_b(c: RGB) -> f32 {
+    c.b
+}
 pub fn add_list(c_list: &[Option<RGB>]) -> RGB {
     let mut r = 0.0;
     let mut g = 0.0;
@@ -129,11 +122,7 @@ pub fn add_list(c_list: &[Option<RGB>]) -> RGB {
 }
 
 pub fn xor_color(a: RGB, b: RGB) -> RGB {
-    color(
-        (a.r - b.r).abs(),
-        (a.g - b.g).abs(),
-        (a.b - b.b).abs(),
-    )
+    color((a.r - b.r).abs(), (a.g - b.g).abs(), (a.b - b.b).abs())
 }
 
 /// POSITION
@@ -161,8 +150,11 @@ pub fn black() -> RGB {
     scalar(0.0)
 }
 pub fn zero_but_one_in_square(pos: POS, top_left: POS, bottom_right: POS) -> f32 {
-    if top_left.x <= pos.x && pos.x < bottom_right.x
-        && top_left.y <= pos.y && pos.y < bottom_right.y {
+    if top_left.x <= pos.x
+        && pos.x < bottom_right.x
+        && top_left.y <= pos.y
+        && pos.y < bottom_right.y
+    {
         1.0
     } else {
         0.0

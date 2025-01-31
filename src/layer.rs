@@ -1,4 +1,4 @@
-use crate::coord::{get_separated_coord_squares, ImgBuffer};
+use crate::coord::ImgBuffer;
 use crate::folding::get_path_out;
 use color_manipulator_rust::{POS, RGB};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
@@ -19,22 +19,6 @@ impl dyn AbsLayer {
             ImgBuffer::new(width as u32, height as u32, get_path_out(output_file_path));
         img_buffer_full.paint(|x, y| self.get_color(x, y));
         img_buffer_full.save();
-
-        // Separated images
-        let threads_coord_squares = get_separated_coord_squares(4, width, height);
-        let mut i = 0;
-        for coord_square in threads_coord_squares {
-            let mut img_buffer_part = ImgBuffer::new(
-                coord_square.get_width() as u32,
-                coord_square.get_height() as u32,
-                format!("{}-{}.jpg", get_path_out(output_file_path), i),
-            );
-            img_buffer_part.paint(|x, y| {
-                self.get_color(coord_square.top_left.x + x, coord_square.top_left.y + y)
-            });
-            img_buffer_part.save(); // Avoiding save here!
-            i += 1;
-        }
     }
 }
 

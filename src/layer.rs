@@ -1,7 +1,6 @@
 use crate::coord::ImgBuffer;
 use crate::folding::get_path_out;
-use crate::RGB;
-use color_manipulator_rust::POS;
+use color_manipulator_rust::{POS, RGB};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
 
 pub trait AbsLayer {

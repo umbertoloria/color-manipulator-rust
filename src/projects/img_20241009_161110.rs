@@ -1,4 +1,4 @@
-use crate::coord::{get_separated_coord_squares, ImgBuffer};
+use crate::coord::{get_coord_chunks, ImgBuffer};
 use crate::folding::get_path_out;
 use crate::layer::{load_image_layer, AbsLayer, ExtractedLayer, FilteredLayer};
 use color_manipulator_rust::{
@@ -46,16 +46,16 @@ pub fn img_20241009_161110() {
     // Separated images
     let width = abs_layer.width();
     let height = abs_layer.height();
-    let threads_coord_squares = get_separated_coord_squares(4, width, height);
+    let coord_chunks = get_coord_chunks(4, width, height);
     let mut i = 0;
-    for coord_square in threads_coord_squares {
+    for coord_chunk in coord_chunks {
         let mut img_buffer_part = ImgBuffer::new(
-            coord_square.get_width() as u32,
-            coord_square.get_height() as u32,
+            coord_chunk.get_width() as u32,
+            coord_chunk.get_height() as u32,
             format!("{}-{}.jpg", get_path_out(output_file_path), i),
         );
         img_buffer_part.paint(|x, y| {
-            abs_layer.get_color(coord_square.top_left.x + x, coord_square.top_left.y + y)
+            abs_layer.get_color(coord_chunk.top_left.x + x, coord_chunk.top_left.y + y)
         });
         img_buffer_part.save(); // Avoiding save here!
         i += 1;

@@ -1,3 +1,4 @@
+use crate::coord::ImgBuffer;
 use crate::folding::get_path_out;
 use crate::RGB;
 use color_manipulator_rust::POS;
@@ -10,27 +11,15 @@ pub trait AbsLayer {
 }
 impl dyn AbsLayer {
     pub fn save(&self, output_file_path: &str) {
-        println!("File \"{}\": saving in", output_file_path);
+        println!("Painting file \"{}\"", output_file_path);
 
         let width = self.width();
         let height = self.height();
 
-        let mut output_img = ImageBuffer::new(width as u32, height as u32);
-
-        for y in 0..height {
-            for x in 0..width {
-                let out_color: RGB = self.get_color(x, y);
-
-                // Write destination color
-                output_img.put_pixel(x as u32, y as u32, Rgb([
-                    (out_color.r * 255.0) as u8,
-                    (out_color.g * 255.0) as u8,
-                    (out_color.b * 255.0) as u8,
-                ]));
-            }
-        }
-
-        output_img.save(get_path_out(output_file_path)).unwrap();
+        let mut img_buffer_full =
+            ImgBuffer::new(width as u32, height as u32, get_path_out(output_file_path));
+        img_buffer_full.paint(|x, y| self.get_color(x, y));
+        img_buffer_full.save();
     }
 }
 

@@ -4,6 +4,7 @@ use color_manipulator_rust::{add, add_list, color, filter_color, filter_scalar, 
 
 mod layer;
 mod folding;
+mod coord;
 
 fn img_20230226_201501() {
     create_filtered_layer(
@@ -385,12 +386,14 @@ fn img_20241009_161110() {
 
 
 fn main() -> Result<(), image::ImageError> {
-    println!("Creating images: from sources and configs");
+    // println!("Creating images: from sources and configs");
 
+    /*
     img_20230226_201501();
     img_20230301_224920_two_images();
     img_20230301_225057();
     img_20231002_103537_three_images();
+    */
     img_20241009_161110();
 
     // create_diff_images();

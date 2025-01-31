@@ -2,6 +2,7 @@ use crate::coord::ImgBuffer;
 use crate::folding::get_path_out;
 use color_manipulator_rust::{POS, RGB};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
+use std::process::exit;
 
 pub trait AbsLayer {
     fn width(&self) -> usize;
@@ -219,3 +220,66 @@ pub fn extract_from_layer(
     ))
 }
 */
+
+// Merge Layer
+pub struct MergeLayer {
+    pub filepath_list: Vec<String>,
+    pub file_image_layers: Vec<FileImageLayer>,
+    pub width: usize,
+    pub height: usize,
+}
+impl MergeLayer {
+    pub fn new(filepath_list: Vec<String>) -> Self {
+        if filepath_list.is_empty() {
+            println!("Filepath List empty");
+            exit(0x0100);
+        }
+        let mut width = 0;
+        let mut height = 0;
+        let mut file_image_layers = Vec::new();
+        for filepath in &filepath_list {
+            let file_image_layer = load_image_layer(filepath);
+
+            width += file_image_layer.width();
+            if height == 0 {
+                height = file_image_layer.height();
+            } else {
+                if height != file_image_layer.height() {
+                    println!("Filepath List go to Images that have different heights");
+                    exit(0x0100);
+                }
+            }
+
+            file_image_layers.push(file_image_layer);
+        }
+        Self {
+            filepath_list,
+            file_image_layers,
+            width,
+            height,
+        }
+    }
+}
+impl AbsLayer for MergeLayer {
+    fn width(&self) -> usize {
+        self.width
+    }
+    fn height(&self) -> usize {
+        self.height
+    }
+    fn get_color(&self, x: usize, y: usize) -> RGB {
+        let mut offset_x = 0;
+        for file_image_layer in &self.file_image_layers {
+            let this_width = file_image_layer.width();
+            if offset_x <= x && x < offset_x + this_width {
+                return file_image_layer.get_color(x - offset_x, y);
+            }
+            offset_x += file_image_layer.width();
+        }
+
+        // This should never happen.
+        println!("MergeLayer::get_color: unknown x={x}, y={y}");
+        exit(0x0100);
+        // color(0.0, 0.0, 0.0)
+    }
+}

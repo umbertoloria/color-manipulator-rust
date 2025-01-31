@@ -37,6 +37,7 @@ pub fn img_20241009_161110() {
 
     let filtered_layer = FilteredLayer::new(Box::new(extract_layer), calculate_color_func);
 
+    let output_file_path = "20241009_161110.jpg";
     let abs_layer: &dyn AbsLayer = &filtered_layer;
-    abs_layer.save("20241009_161110.jpg");
+    abs_layer.save(output_file_path);
 }

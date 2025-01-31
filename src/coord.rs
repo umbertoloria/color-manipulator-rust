@@ -1,6 +1,25 @@
 use color_manipulator_rust::RGB;
 use image::{ImageBuffer, Rgb};
 
+// Coord
+pub struct Coord {
+    pub x: usize,
+    pub y: usize,
+}
+pub struct CoordSquare {
+    pub top_left: Coord,
+    pub bottom_right: Coord,
+}
+impl CoordSquare {
+    pub fn get_width(&self) -> usize {
+        self.bottom_right.x - self.top_left.x
+    }
+    pub fn get_height(&self) -> usize {
+        self.bottom_right.y - self.top_left.y
+    }
+}
+
+// Img Buffer
 pub struct ImgBuffer {
     width: u32,
     height: u32,
@@ -45,4 +64,38 @@ impl ImgBuffer {
                 .unwrap();
         }
     }
+}
+
+// Separation of CoordSquare
+pub fn get_separated_coord_squares(
+    threads_num: usize,
+    width: usize,
+    height: usize,
+) -> Vec<CoordSquare> {
+    let slice_for_thread = width / threads_num;
+    let mut threads_coords: Vec<CoordSquare> = Vec::new();
+    let mut next_x_ready = 0;
+    for _ in 0..(threads_num - 1) {
+        let prev_x = next_x_ready;
+        next_x_ready = (prev_x + slice_for_thread) + 1;
+        threads_coords.push(CoordSquare {
+            top_left: Coord { x: prev_x, y: 0 },
+            bottom_right: Coord {
+                x: next_x_ready - 1,
+                y: height,
+            },
+        });
+    }
+    threads_coords.push(CoordSquare {
+        top_left: Coord {
+            x: next_x_ready,
+            y: 0,
+        },
+        bottom_right: Coord {
+            x: width,
+            y: height,
+        },
+    });
+    // println!("threads_coords: {:?}", threads_coords); // For debug only.
+    threads_coords
 }

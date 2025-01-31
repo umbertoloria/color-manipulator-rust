@@ -131,7 +131,7 @@ pub struct FilteredLayer {
     calculate_color_func: fn(c: RGB, p: POS) -> RGB,
 }
 impl FilteredLayer {
-    fn new(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Self {
+    pub fn new(layer: Box<dyn AbsLayer>, calculate_color_func: fn(c: RGB, p: POS) -> RGB) -> Self {
         Self {
             layer,
             calculate_color_func,
@@ -174,7 +174,7 @@ pub struct ExtractedLayer {
     bottom_right_y: usize,
 }
 impl ExtractedLayer {
-    fn new(
+    pub fn new(
         layer: Box<dyn AbsLayer>,
         top_left_x: usize,
         top_left_y: usize,
@@ -202,6 +202,7 @@ impl AbsLayer for ExtractedLayer {
             .get_color(self.top_left_x + x, self.top_left_y + y)
     }
 }
+/*
 pub fn extract_from_layer(
     layer: Box<dyn AbsLayer>,
     top_left_x: usize,
@@ -217,3 +218,4 @@ pub fn extract_from_layer(
         bottom_right_y,
     ))
 }
+*/

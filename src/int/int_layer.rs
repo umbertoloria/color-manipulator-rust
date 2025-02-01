@@ -152,3 +152,47 @@ impl IntAbsLayer for IntMergeLayer {
         // color(0.0, 0.0, 0.0)
     }
 }
+
+// DIFF LAYER
+pub struct IntDiffLayer {
+    a: Box<dyn IntAbsLayer>,
+    b: Box<dyn IntAbsLayer>,
+}
+impl IntDiffLayer {
+    pub fn save(&self, filepath: String) {
+        // TODO: Extract method **1
+        let mut img_buffer_chunk = IntImgBuffer::new(self.width(), self.height(), filepath);
+        img_buffer_chunk.paint(|x, y| self.get_color(x, y));
+        img_buffer_chunk.save();
+    }
+}
+impl IntAbsLayer for IntDiffLayer {
+    fn width(&self) -> usize {
+        // Hoping widths between "a" and "b" are the same.
+        self.a.width()
+    }
+    fn height(&self) -> usize {
+        // Hoping widths between "a" and "b" are the same.
+        self.a.height()
+    }
+    fn get_color(&self, x: usize, y: usize) -> Color {
+        let a_color = self.a.get_color(x, y);
+        let b_color = self.b.get_color(x, y);
+        Color {
+            r: safe_diff_color_value(a_color.r, b_color.r),
+            g: safe_diff_color_value(a_color.g, b_color.g),
+            b: safe_diff_color_value(a_color.b, b_color.b),
+        }
+    }
+}
+fn safe_diff_color_value(a: u8, b: u8) -> u8 {
+    if a > b {
+        a - b
+    } else {
+        // Here b>a or b==a, so no overflow possible.
+        b - a
+    }
+}
+pub fn create_int_diff_layer(a: Box<dyn IntAbsLayer>, b: Box<dyn IntAbsLayer>) -> IntDiffLayer {
+    IntDiffLayer { a, b }
+}

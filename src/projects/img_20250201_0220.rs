@@ -24,7 +24,13 @@ pub fn img_20250201_0220() {
             }
             c
             /*let rgb = c.to_rgb();
-            return rgb_to_color(rgb);*/
+            let result = rgb_to_color(add_list(&[
+                //
+                Some(rgb),
+                Some(color(0.0, 0.0, 0.005)),
+            ]));
+            println!("{}", result.b);
+            return result;*/
         },
     );
     let abs_layer: &dyn IntAbsLayer = &filtered_layer;
@@ -41,6 +47,7 @@ pub fn img_20250201_0220() {
     for coord_chunk in coord_chunks {
         let filepath = format!("{}-{}.png", get_path_out(filename), i);
 
+        // TODO: Extract method **1
         let mut img_buffer_chunk = IntImgBuffer::new(
             coord_chunk.get_width(),
             coord_chunk.get_height(),

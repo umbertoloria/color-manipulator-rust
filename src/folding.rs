@@ -1,3 +1,7 @@
+pub fn get_path_in(name: &str) -> String {
+    format!("input/{}", name)
+}
+
 pub fn get_path_out(name: &str) -> String {
     format!("out/{}", name)
 }

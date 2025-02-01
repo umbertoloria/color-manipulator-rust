@@ -59,7 +59,7 @@ impl ImgBuffer {
     }
     pub fn save(&self) {
         if self.image_buffer.is_some() {
-            // TODO: Is "clone" heavy?
+            // TODO: Avoid clone
             self.image_buffer
                 .clone()
                 .unwrap()

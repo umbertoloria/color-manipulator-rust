@@ -3,6 +3,9 @@ use crate::projects::img_diffs_create::img_diffs_create;
 
 mod coord;
 mod folding;
+pub mod int_color;
+pub mod int_img_buffer;
+pub mod int_layer;
 mod layer;
 pub mod projects;
 

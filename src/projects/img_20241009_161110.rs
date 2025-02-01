@@ -1,6 +1,4 @@
-use crate::coord::{get_coord_chunks, ImgBuffer};
-use crate::folding::get_path_out;
-use crate::layer::{load_image_layer, AbsLayer, ExtractedLayer, FilteredLayer, MergeLayer};
+use crate::layer::{load_image_layer, AbsLayer, ExtractedLayer, FilteredLayer};
 use color_manipulator_rust::{
     add_list, color, filter_scalar_and_stretch, get_distance, mult, scalar, zero_but_one_in_square,
     POS, RGB,
@@ -41,35 +39,5 @@ pub fn img_20241009_161110() {
 
     let output_file_path = "20241009_161110.jpg";
     let abs_layer: &dyn AbsLayer = &filtered_layer;
-    // abs_layer.save(output_file_path); // Avoid calculating the entire image.
-
-    // Separated chunks
-    let width = abs_layer.width();
-    let height = abs_layer.height();
-    let chunks_count = 4;
-    let coord_chunks = get_coord_chunks(chunks_count, width, height);
-    let mut i = 0;
-    for coord_chunk in coord_chunks {
-        let mut img_buffer_chunk = ImgBuffer::new(
-            coord_chunk.get_width() as u32,
-            coord_chunk.get_height() as u32,
-            format!("{}-{}.jpg", get_path_out(output_file_path), i),
-        );
-        img_buffer_chunk.paint(|x, y| {
-            abs_layer.get_color(coord_chunk.top_left.x + x, coord_chunk.top_left.y + y)
-        });
-        img_buffer_chunk.save();
-        i += 1;
-    }
-
-    // Merge chunks
-    let mut filepaths = Vec::new();
-    for i in 0..chunks_count {
-        filepaths.push(format!("{}-{}.jpg", get_path_out(output_file_path), i));
-    }
-    let merge_layer = MergeLayer::new(filepaths);
-    let output_file_path = "20241009_161110_new.jpg";
-    // let output_file_path = "20241009_161110.jpg";
-    let abs_layer: &dyn AbsLayer = &merge_layer;
     abs_layer.save(output_file_path);
 }

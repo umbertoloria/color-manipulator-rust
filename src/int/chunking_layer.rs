@@ -9,6 +9,8 @@ pub fn split_layer_in_chunks_and_save_parts_and_combined(
     filename: &str,
     chunks_count: usize,
 ) {
+    // TODO: Multithreading here please
+
     // Separated chunks
     let width = abs_layer.width();
     let height = abs_layer.height();

@@ -1,4 +1,5 @@
 use crate::coord::Coord;
+use crate::int::chunking_layer::split_layer_in_chunks_and_save_parts_and_combined;
 use crate::int::int_color::Color;
 use crate::int::int_img_buffer::IntImgBuffer;
 use image::{DynamicImage, GenericImageView};
@@ -70,6 +71,10 @@ impl IntFilteredLayer {
     pub fn save(&self, filepath: String) {
         let abs_layer: &dyn IntAbsLayer = self;
         abs_layer.save(&filepath);
+    }
+    pub fn save_via_chunks(&self, filename: &str) {
+        let abs_layer: &dyn IntAbsLayer = self;
+        split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename, 32);
     }
 }
 impl IntAbsLayer for IntFilteredLayer {

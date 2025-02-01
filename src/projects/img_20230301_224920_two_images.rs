@@ -5,7 +5,7 @@ use color_manipulator_rust::{add, color, filter_scalar, get_r, mult, only_b, sca
 pub fn img_20230301_224920_two_images() {
     create_int_filtered_layer(
         load_int_file_image_layer_box("./input/20230301_224920.jpg"),
-        |c, _p| {
+        |c, _, _, _| {
             let c = c.to_rgb();
             rgb_to_color(add(
                 mult(
@@ -19,7 +19,7 @@ pub fn img_20230301_224920_two_images() {
     .save_via_chunks("20230301_224920_1.jpg");
     create_int_filtered_layer(
         load_int_file_image_layer_box("./input/20230301_224920.jpg"),
-        |c, _p| {
+        |c, _, _, _| {
             let c = c.to_rgb();
             rgb_to_color(xor_color(
                 mult(

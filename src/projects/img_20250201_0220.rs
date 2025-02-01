@@ -9,7 +9,7 @@ pub fn img_20250201_0220() {
 
     let filtered_layer = create_int_filtered_layer(
         load_int_file_image_layer_box(&get_path_in(filename)),
-        |c, p| {
+        |c, p, _, _| {
             if c.r == 237 && c.g == 28 && c.b == 36 {
                 // println!("Color 1");
             } else if c.r == 255 && c.g == 242 && c.b == 0 {

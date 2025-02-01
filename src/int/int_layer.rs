@@ -62,7 +62,7 @@ pub fn load_int_file_image_layer_box(path: &str) -> Box<IntFileImageLayer> {
 }
 
 // FILTERED LAYER
-type IntFilteredLayerFn = fn(c: Color, p: Coord) -> Color;
+type IntFilteredLayerFn = fn(c: Color, p: Coord, width: usize, height: usize) -> Color;
 pub struct IntFilteredLayer {
     layer: Box<dyn IntAbsLayer>,
     calculate_color_func: IntFilteredLayerFn,
@@ -87,7 +87,7 @@ impl IntAbsLayer for IntFilteredLayer {
     fn get_color(&self, x: usize, y: usize) -> Color {
         let in_color = self.layer.get_color(x, y);
         let in_position = Coord { x, y };
-        (self.calculate_color_func)(in_color, in_position)
+        (self.calculate_color_func)(in_color, in_position, self.width(), self.height())
     }
 }
 pub fn create_int_filtered_layer(

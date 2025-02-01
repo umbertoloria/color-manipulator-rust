@@ -8,7 +8,7 @@ use color_manipulator_rust::{
 pub fn img_20230301_225057() {
     create_int_filtered_layer(
         load_int_file_image_layer_box("./input/20230301_225057.jpg"),
-        |c, _p| {
+        |c, _, _, _| {
             let c = c.to_rgb();
             rgb_to_color(add(
                 color(0.0, 0.2, 0.15),

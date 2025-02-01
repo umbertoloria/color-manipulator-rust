@@ -1,4 +1,4 @@
-use crate::folding::{get_path_oracle, get_path_oracle_diff, get_path_out};
+use crate::folding::{get_path_in, get_path_oracle, get_path_oracle_diff, get_path_out};
 use crate::layer::{create_diff_layer, load_image_layer};
 
 pub fn img_diffs_create() {
@@ -12,11 +12,16 @@ pub fn img_diffs_create() {
     create_and_save_diff_image_from_oracle("20231002_103537_1.jpg");
     create_and_save_diff_image_from_oracle("20231002_103537_2.jpg");
     */
+    create_and_save_diff_image_from_paths("20250201_0220.png");
+}
+fn create_and_save_diff_image_from_paths(filename_in: &str) {
+    let filename_out = get_path_out(&format!("{}_new.png", filename_in));
+    let filename_diff = get_path_out(&format!("{}_diff.png", filename_in));
     create_diff_layer(
-        Box::new(load_image_layer("out/20240714_1958.jpg")),
-        Box::new(load_image_layer("out/20240714_1958.jpg_new.jpg")),
+        Box::new(load_image_layer(&get_path_in(filename_in))),
+        Box::new(load_image_layer(&filename_out)),
     )
-    .save("out/20240714_1958_diff.jpg");
+    .save(&filename_diff);
 }
 fn create_and_save_diff_image_from_oracle(name: &str) {
     println!("File \"{}\"", name);

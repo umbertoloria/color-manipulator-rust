@@ -13,10 +13,10 @@ pub fn img_diffs_create() {
     create_and_save_diff_image_from_oracle("20231002_103537_2.jpg");
     */
     create_diff_layer(
-        Box::new(load_image_layer("out/20241009_161110.jpg")),
-        Box::new(load_image_layer("out/20241009_161110_new.jpg")),
+        Box::new(load_image_layer("out/20240714_1958.jpg")),
+        Box::new(load_image_layer("out/20240714_1958.jpg_new.jpg")),
     )
-    .save("out/20241009_161110_diff.jpg");
+    .save("out/20240714_1958_diff.jpg");
 }
 fn create_and_save_diff_image_from_oracle(name: &str) {
     println!("File \"{}\"", name);

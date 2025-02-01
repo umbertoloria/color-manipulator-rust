@@ -1,4 +1,5 @@
 use crate::projects::img_20240714_1958::img_20240714_1958;
+use crate::projects::img_diffs_create::img_diffs_create;
 
 mod coord;
 mod folding;
@@ -14,5 +15,5 @@ fn main() {
     img_20241009_161110();
     */
     img_20240714_1958();
-    // img_diffs_create();
+    img_diffs_create();
 }

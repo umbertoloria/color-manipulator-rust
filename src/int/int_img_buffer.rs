@@ -1,4 +1,4 @@
-use crate::int_layer::Color;
+use crate::int::int_layer::Color;
 use image::{ImageBuffer, Rgb};
 
 // Img Buffer

@@ -1,8 +1,8 @@
 use crate::coord::get_coord_chunks;
 use crate::folding::{get_path_in, get_path_out};
-use crate::int_color::rgb_to_color;
-use crate::int_img_buffer::IntImgBuffer;
-use crate::int_layer::{
+use crate::int::int_color::rgb_to_color;
+use crate::int::int_img_buffer::IntImgBuffer;
+use crate::int::int_layer::{
     create_int_filtered_layer, load_int_file_image_layer_box, IntAbsLayer, IntMergeLayer,
 };
 use color_manipulator_rust::{add_list, color, filter_scalar_and_stretch, get_r};

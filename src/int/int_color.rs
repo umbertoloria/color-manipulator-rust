@@ -1,4 +1,4 @@
-use crate::int_layer::Color;
+use crate::int::int_layer::Color;
 use color_manipulator_rust::RGB;
 
 pub fn rgb_to_color(rgb: RGB) -> Color {

@@ -1,6 +1,6 @@
 use crate::coord::Coord;
 use crate::folding::get_path_out;
-use crate::int_img_buffer::IntImgBuffer;
+use crate::int::int_img_buffer::IntImgBuffer;
 use color_manipulator_rust::RGB;
 use image::{DynamicImage, GenericImageView};
 use std::process::exit;
@@ -61,7 +61,6 @@ impl IntAbsLayer for IntFileImageLayer {
     }
     fn get_color(&self, x: usize, y: usize) -> Color {
         let color_src = self.image.get_pixel(x as u32, y as u32).0;
-        ///
         let r_src = *(color_src.get(0).unwrap());
         let g_src = *(color_src.get(1).unwrap());
         let b_src = *(color_src.get(2).unwrap());

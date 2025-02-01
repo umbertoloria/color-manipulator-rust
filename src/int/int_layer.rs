@@ -66,6 +66,12 @@ pub struct IntFilteredLayer {
     layer: Box<dyn IntAbsLayer>,
     calculate_color_func: IntFilteredLayerFn,
 }
+impl IntFilteredLayer {
+    pub fn save(&self, filepath: String) {
+        let abs_layer: &dyn IntAbsLayer = self;
+        abs_layer.save(&filepath);
+    }
+}
 impl IntAbsLayer for IntFilteredLayer {
     fn width(&self) -> usize {
         self.layer.width()

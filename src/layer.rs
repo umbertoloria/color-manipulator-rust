@@ -9,14 +9,14 @@ pub trait AbsLayer {
     fn get_color(&self, x: usize, y: usize) -> RGB;
 }
 impl dyn AbsLayer {
-    pub fn save(&self, output_file_path: &str) {
-        println!("Painting file \"{}\"", output_file_path);
+    pub fn save(&self, filepath: &str) {
+        println!("Painting file \"{}\"", filepath);
 
         let width = self.width();
         let height = self.height();
 
         let mut img_buffer_full =
-            ImgBuffer::new(width as u32, height as u32, get_path_out(output_file_path));
+            ImgBuffer::new(width as u32, height as u32, get_path_out(filepath));
         img_buffer_full.paint(|x, y| self.get_color(x, y));
         img_buffer_full.save();
     }

@@ -1,5 +1,4 @@
 use crate::coord::Coord;
-use crate::folding::get_path_out;
 use crate::int::int_color::Color;
 use crate::int::int_img_buffer::IntImgBuffer;
 use image::{DynamicImage, GenericImageView};
@@ -18,7 +17,7 @@ impl dyn IntAbsLayer {
         let width = self.width();
         let height = self.height();
 
-        let mut img_buffer_full = IntImgBuffer::new(width, height, get_path_out(output_file_path));
+        let mut img_buffer_full = IntImgBuffer::new(width, height, output_file_path.into());
         img_buffer_full.paint(|x, y| self.get_color(x, y));
         img_buffer_full.save();
     }
@@ -92,7 +91,6 @@ pub fn create_int_filtered_layer(
 
 // MERGE LAYER
 pub struct IntMergeLayer {
-    pub filepath_list: Vec<String>,
     pub file_image_layers: Vec<IntFileImageLayer>,
     pub width: usize,
     pub height: usize,
@@ -122,7 +120,6 @@ impl IntMergeLayer {
             file_image_layers.push(file_image_layer);
         }
         Self {
-            filepath_list,
             file_image_layers,
             width,
             height,

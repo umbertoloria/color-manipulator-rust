@@ -3,8 +3,8 @@ use crate::int::int_layer::{create_int_diff_layer, load_int_file_image_layer_box
 use crate::layer::{create_diff_layer, load_image_layer};
 
 pub fn img_diffs_create() {
-    println!("Creating images: diff from oracles");
     /*
+    println!("Creating images: diff from oracles");
     create_and_save_diff_image_from_oracle("20230226_201501.jpg");
     create_and_save_diff_image_from_oracle("20230301_224920_1.jpg");
     create_and_save_diff_image_from_oracle("20230301_224920_2.jpg");
@@ -13,7 +13,10 @@ pub fn img_diffs_create() {
     create_and_save_diff_image_from_oracle("20231002_103537_1.jpg");
     create_and_save_diff_image_from_oracle("20231002_103537_2.jpg");
     */
+    /*
+    println!("Creating images: diff from ints");
     create_and_save_int_diff_image_from_paths("20250201_0220.png");
+    */
 }
 fn create_and_save_diff_image_from_oracle(name: &str) {
     println!("File \"{}\"", name);
@@ -26,7 +29,7 @@ fn create_and_save_diff_image_from_oracle(name: &str) {
 fn create_and_save_int_diff_image_from_paths(filename_in: &str) {
     create_int_diff_layer(
         load_int_file_image_layer_box(&get_path_in(filename_in)),
-        load_int_file_image_layer_box(&get_path_out(&format!("{}_new.png", filename_in))),
+        load_int_file_image_layer_box(&get_path_out(filename_in)),
     )
     .save(get_path_out(&format!("{}_diff.png", filename_in)));
 }

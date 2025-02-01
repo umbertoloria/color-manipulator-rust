@@ -96,7 +96,7 @@ pub struct IntMergeLayer {
     pub height: usize,
 }
 impl IntMergeLayer {
-    pub fn new(filepath_list: Vec<String>) -> Self {
+    pub fn new(filepath_list: &Vec<String>) -> Self {
         if filepath_list.is_empty() {
             println!("Filepath List empty");
             exit(0x0100);
@@ -104,7 +104,7 @@ impl IntMergeLayer {
         let mut width = 0;
         let mut height = 0;
         let mut file_image_layers = Vec::new();
-        for filepath in &filepath_list {
+        for filepath in filepath_list {
             let file_image_layer = load_int_file_image_layer(filepath);
 
             width += file_image_layer.width();

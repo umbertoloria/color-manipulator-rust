@@ -24,5 +24,6 @@ pub fn img_20240714_1958() {
         },
     );
     let abs_layer: &dyn IntAbsLayer = &filtered_layer;
-    split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename);
+    // abs_layer.save(&get_path_out(filename));
+    split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename, 8);
 }

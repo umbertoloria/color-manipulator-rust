@@ -33,5 +33,5 @@ pub fn img_20250201_0220() {
         },
     );
     let abs_layer: &dyn IntAbsLayer = &filtered_layer;
-    split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename);
+    split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename, 4);
 }

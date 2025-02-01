@@ -1,4 +1,4 @@
-use crate::coord::ImgBuffer;
+use crate::coord::{Coord, ImgBuffer};
 use crate::folding::get_path_out;
 use color_manipulator_rust::{POS, RGB};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
@@ -66,6 +66,9 @@ impl AbsLayer for FileImageLayer {
 }
 pub fn load_image_layer(path: &str) -> FileImageLayer {
     FileImageLayer::new(path)
+}
+pub fn load_image_layer_box(path: &str) -> Box<FileImageLayer> {
+    Box::new(FileImageLayer::new(path))
 }
 
 // Diff Layer
@@ -281,5 +284,34 @@ impl AbsLayer for MergeLayer {
         println!("MergeLayer::get_color: unknown x={x}, y={y}");
         exit(0x0100);
         // color(0.0, 0.0, 0.0)
+    }
+}
+
+// STRICT LAYER
+type FilteredStrictLayerFn = fn(c: RGB, p: Coord) -> RGB;
+pub struct FilteredStrictLayer {
+    layer: Box<dyn AbsLayer>,
+    calculate_color_func: FilteredStrictLayerFn,
+}
+impl AbsLayer for FilteredStrictLayer {
+    fn width(&self) -> usize {
+        self.layer.width()
+    }
+    fn height(&self) -> usize {
+        self.layer.height()
+    }
+    fn get_color(&self, x: usize, y: usize) -> RGB {
+        let in_color = self.layer.get_color(x, y);
+        let in_position = Coord { x, y };
+        (self.calculate_color_func)(in_color, in_position)
+    }
+}
+pub fn create_filtered_strict_layer(
+    layer: Box<dyn AbsLayer>,
+    calculate_color_func: FilteredStrictLayerFn,
+) -> FilteredStrictLayer {
+    FilteredStrictLayer {
+        layer,
+        calculate_color_func,
     }
 }

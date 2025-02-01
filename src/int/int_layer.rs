@@ -1,26 +1,9 @@
 use crate::coord::Coord;
 use crate::folding::get_path_out;
+use crate::int::int_color::Color;
 use crate::int::int_img_buffer::IntImgBuffer;
-use color_manipulator_rust::RGB;
 use image::{DynamicImage, GenericImageView};
 use std::process::exit;
-
-// COLOR
-#[derive(Clone, Copy, Debug)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-impl Color {
-    pub fn to_rgb(&self) -> RGB {
-        RGB {
-            r: self.r as f32 / 255.0,
-            g: self.g as f32 / 255.0,
-            b: self.b as f32 / 255.0,
-        }
-    }
-}
 
 // ABS LAYER
 pub trait IntAbsLayer {

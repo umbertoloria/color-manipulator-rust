@@ -1,6 +1,10 @@
 use crate::folding::get_path_out;
+use crate::int::computing::create_mean_canvas_layer_from_int_layer;
 use crate::int::int_color::rgb_to_color;
-use crate::int::int_layer::{create_int_filtered_layer, load_int_file_image_layer_box};
+use crate::int::int_layer::{
+    create_int_filtered_layer, load_int_file_image_layer, load_int_file_image_layer_box,
+    IntAbsLayer,
+};
 use color_manipulator_rust::{add_list, color, get_distance, get_r, POS, RGB};
 
 fn cell_shading(scalar: f32, num_shades: usize) -> f32 {
@@ -64,4 +68,16 @@ pub fn img_20240714_1958() {
         },
     )
     .save(get_path_out("20240714_1958.png"));
+
+    // Mean image
+    let image = load_int_file_image_layer("./input/20240714_1958.png");
+    let mut canvas = create_mean_canvas_layer_from_int_layer(&image as &dyn IntAbsLayer);
+    let mean_times = 300;
+    for i in 0..mean_times {
+        let new_canvas = create_mean_canvas_layer_from_int_layer(&canvas as &dyn IntAbsLayer);
+        canvas = new_canvas;
+        println!("Painted mean {i}");
+    }
+    create_int_filtered_layer(Box::new(canvas), |c, _, _, _| c)
+        .save(get_path_out("20240714_1958_mean_300.png"));
 }

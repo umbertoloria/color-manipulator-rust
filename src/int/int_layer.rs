@@ -2,7 +2,7 @@ use crate::coord::Coord;
 use crate::int::chunking_layer::split_layer_in_chunks_and_save_parts_and_combined;
 use crate::int::int_color::Color;
 use crate::int::int_img_buffer::IntImgBuffer;
-use image::{DynamicImage, GenericImageView};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
 use std::process::exit;
 
 // ABS LAYER
@@ -43,6 +43,7 @@ impl IntAbsLayer for IntFileImageLayer {
         self.image.height() as usize
     }
     fn get_color(&self, x: usize, y: usize) -> Color {
+        // TODO: Extract method **2
         let color_src = self.image.get_pixel(x as u32, y as u32).0;
         let r_src = *(color_src.get(0).unwrap());
         let g_src = *(color_src.get(1).unwrap());
@@ -239,4 +240,46 @@ pub fn create_int_extracted_layer_box(
         bottom_right_x,
         bottom_right_y,
     })
+}
+
+// CANVAS LAYER
+pub struct CanvasLayer {
+    width: usize,
+    height: usize,
+    image_buffer: ImageBuffer<Rgb<u8>, Vec<u8>>,
+}
+
+impl CanvasLayer {
+    pub fn set_color(&mut self, x: usize, y: usize, color: Color) {
+        self.image_buffer
+            .put_pixel(x as u32, y as u32, Rgb([color.r, color.g, color.b]));
+    }
+}
+impl IntAbsLayer for CanvasLayer {
+    fn width(&self) -> usize {
+        self.image_buffer.width() as usize
+    }
+    fn height(&self) -> usize {
+        self.image_buffer.height() as usize
+    }
+    fn get_color(&self, x: usize, y: usize) -> Color {
+        // TODO: Extract method **2
+        let color_src = self.image_buffer.get_pixel(x as u32, y as u32).0;
+        let r_src = *(color_src.get(0).unwrap());
+        let g_src = *(color_src.get(1).unwrap());
+        let b_src = *(color_src.get(2).unwrap());
+        Color {
+            r: r_src,
+            g: g_src,
+            b: b_src,
+        }
+    }
+}
+pub fn create_canvas_layer(width: usize, height: usize) -> CanvasLayer {
+    let mut image_buffer = ImageBuffer::new(width as u32, height as u32);
+    CanvasLayer {
+        width,
+        height,
+        image_buffer,
+    }
 }

@@ -1,14 +1,9 @@
 use crate::folding::get_path_in;
-use crate::int::chunking_layer::split_layer_in_chunks_and_save_parts_and_combined;
-use crate::int::int_layer::{
-    create_int_filtered_layer, load_int_file_image_layer_box, IntAbsLayer,
-};
+use crate::int::int_layer::{create_int_filtered_layer, load_int_file_image_layer_box};
 
 pub fn img_20250201_0220() {
-    let filename = "20250201_0220.png";
-
-    let filtered_layer = create_int_filtered_layer(
-        load_int_file_image_layer_box(&get_path_in(filename)),
+    create_int_filtered_layer(
+        load_int_file_image_layer_box(&get_path_in("20250201_0220.png")),
         |c, p, _, _| {
             if c.r == 237 && c.g == 28 && c.b == 36 {
                 // println!("Color 1");
@@ -31,7 +26,6 @@ pub fn img_20250201_0220() {
             println!("{}", result.b);
             return result;*/
         },
-    );
-    let abs_layer: &dyn IntAbsLayer = &filtered_layer;
-    split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename, 4);
+    )
+    .save_via_chunks("20250201_0220.png");
 }

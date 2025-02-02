@@ -1,4 +1,4 @@
-use color_manipulator_rust::RGB;
+use color_manipulator_rust::{POS, RGB};
 use image::{ImageBuffer, Rgb};
 
 // Coord
@@ -6,6 +6,14 @@ use image::{ImageBuffer, Rgb};
 pub struct Coord {
     pub x: usize,
     pub y: usize,
+}
+impl Coord {
+    pub fn to_pos(&self, width: usize, height: usize) -> POS {
+        POS {
+            x: self.x as f32 / width as f32,
+            y: self.y as f32 / height as f32,
+        }
+    }
 }
 #[derive(Clone, Copy, Debug)]
 pub struct CoordSquare {

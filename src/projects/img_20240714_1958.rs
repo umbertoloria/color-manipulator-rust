@@ -1,29 +1,67 @@
-use crate::folding::get_path_in;
-use crate::int::chunking_layer::split_layer_in_chunks_and_save_parts_and_combined;
+use crate::folding::get_path_out;
 use crate::int::int_color::rgb_to_color;
-use crate::int::int_layer::{
-    create_int_filtered_layer, load_int_file_image_layer_box, IntAbsLayer,
-};
-use color_manipulator_rust::{add_list, color, filter_scalar_and_stretch, get_r};
+use crate::int::int_layer::{create_int_filtered_layer, load_int_file_image_layer_box};
+use color_manipulator_rust::{add_list, color, get_distance, get_r, POS, RGB};
+
+fn cell_shading(scalar: f32, num_shades: usize) -> f32 {
+    let num_shades_f32 = (num_shades - 1) as f32;
+    scale_on_shade_excl(scalar, num_shades) as f32 / num_shades_f32
+}
+fn scale_on_shade_excl(scalar: f32, num_shades: usize) -> usize {
+    // Output: [0, num_shades)
+    let result = f32::round(scalar / (1.0 / num_shades as f32)) as usize;
+    if result >= num_shades {
+        num_shades - 1
+    } else {
+        result
+    }
+}
+
+fn grayscale(rgb: RGB, strength_scalar: f32) -> RGB {
+    let mean = (rgb.r + rgb.g + rgb.b) / 3.0;
+    let dist_r = rgb.r - mean;
+    let dist_g = rgb.g - mean;
+    let dist_b = rgb.b - mean;
+    color(
+        // R
+        mean + dist_r * (1.0 - strength_scalar),
+        // G
+        mean + dist_g * (1.0 - strength_scalar),
+        // B
+        mean + dist_b * (1.0 - strength_scalar),
+    )
+}
+
+fn set_boundaries(scalar: f32) -> f32 {
+    if scalar > 1.0 {
+        1.0
+    } else if scalar < 0.0 {
+        0.0
+    } else {
+        scalar
+    }
+}
 
 pub fn img_20240714_1958() {
-    let filename = "20240714_1958.png";
+    create_int_filtered_layer(
+        load_int_file_image_layer_box("./input/20240714_1958.png"),
+        |c, p, width, height| {
+            let c = c.to_rgb();
+            let p = p.to_pos(width, height);
 
-    let filtered_layer = create_int_filtered_layer(
-        load_int_file_image_layer_box(&get_path_in(filename)),
-        |c, p| {
-            let rgb = c.to_rgb();
+            let center = POS { x: 0.48, y: 0.555 };
+            let closer_from_center = set_boundaries(1.0 - get_distance(p, center) * 1.8);
+            let shaded_value_gradient = cell_shading(closer_from_center, 5);
+
             return rgb_to_color(add_list(&[
                 Some(color(0.0, 0.03, 0.4)),
                 Some(color(
+                    get_r(c) * cell_shading(shaded_value_gradient, 5),
                     0.0,
                     0.0,
-                    filter_scalar_and_stretch(get_r(rgb), 0.5, 0.8) * 0.6,
                 )),
             ]));
         },
-    );
-    let abs_layer: &dyn IntAbsLayer = &filtered_layer;
-    // abs_layer.save(&get_path_out(filename));
-    split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename, 8);
+    )
+    .save(get_path_out("20240714_1958.png"));
 }

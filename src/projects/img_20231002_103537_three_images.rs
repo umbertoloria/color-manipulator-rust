@@ -1,4 +1,5 @@
-use crate::layer::{create_filtered_layer, load_image_layer};
+use crate::int::int_color::rgb_to_color;
+use crate::int::int_layer::{create_int_filtered_layer, load_int_file_image_layer_box};
 use color_manipulator_rust::{
     add_list, filter_scalar_and_stretch, get_b, get_g, get_r, gradient_linear, mult, scalar, RGB,
 };
@@ -67,9 +68,11 @@ pub fn img_20231002_103537_three_images() {
     let rgb_2_4 = color_hex("#001749");
     let rgb_2_5 = color_hex("#880c31");
     println!("{:?}", rgb_2_5);*/
-    create_filtered_layer(
-        Box::new(load_image_layer("./input/20231002_103537_resized.jpg")),
-        |c, p| {
+    create_int_filtered_layer(
+        load_int_file_image_layer_box("./input/20231002_103537_resized.jpg"),
+        |c, p, width, height| {
+            let c = c.to_rgb();
+            let p = p.to_pos(width, height);
             // Known data:
             //   width=4624
             //   height=3468
@@ -78,19 +81,21 @@ pub fn img_20231002_103537_three_images() {
             let converted_y = p.y * 4624.0;
             if converted_y < 578.0 || converted_y >= (578.0 + 3468.0) {
                 // return rgb_0_0;
-                return RGB {
+                return rgb_to_color(RGB {
                     r: 0.6745098,
                     g: 0.4509804,
                     b: 0.3764706,
-                };
+                });
             }
-            return c;
+            return rgb_to_color(c);
         },
     )
-    .save("20231002_103537_0.jpg");
-    create_filtered_layer(
-        Box::new(load_image_layer("./input/20231002_103537_resized.jpg")),
-        |c, p| {
+    .save_via_chunks("20231002_103537_0.jpg");
+    create_int_filtered_layer(
+        load_int_file_image_layer_box("./input/20231002_103537_resized.jpg"),
+        |c, p, width, height| {
+            let c = c.to_rgb();
+            let p = p.to_pos(width, height);
             // Known data:
             //   width=4624
             //   height=3468
@@ -99,13 +104,13 @@ pub fn img_20231002_103537_three_images() {
             let converted_y = p.y * 4624.0;
             if converted_y < 578.0 || converted_y >= (578.0 + 3468.0) {
                 // return rgb_1_1;
-                return RGB {
+                return rgb_to_color(RGB {
                     r: 0.29803923,
                     g: 0.42745098,
                     b: 0.14901961,
-                };
+                });
             }
-            return add_list(&[
+            return rgb_to_color(add_list(&[
                 // Base
                 // Some(mult(rgb_1_2, scalar(0.10))),
                 Some(mult(
@@ -229,13 +234,15 @@ pub fn img_20231002_103537_three_images() {
                 } else {
                     None
                 },
-            ]);
+            ]));
         },
     )
-    .save("20231002_103537_1.jpg");
-    create_filtered_layer(
-        Box::new(load_image_layer("./input/20231002_103537_resized.jpg")),
-        |c, p| {
+    .save_via_chunks("20231002_103537_1.jpg");
+    create_int_filtered_layer(
+        load_int_file_image_layer_box("./input/20231002_103537_resized.jpg"),
+        |c, p, width, height| {
+            let c = c.to_rgb();
+            let p = p.to_pos(width, height);
             // Known data:
             //   width=4624
             //   height=3468
@@ -244,13 +251,13 @@ pub fn img_20231002_103537_three_images() {
             let converted_y = p.y * 4624.0;
             if converted_y < 578.0 || converted_y >= (578.0 + 3468.0) {
                 // return rgb_2_1;
-                return RGB {
+                return rgb_to_color(RGB {
                     r: 0.05490196,
                     g: 0.050980393,
                     b: 0.12156863,
-                };
+                });
             }
-            return add_list(&[
+            return rgb_to_color(add_list(&[
                 // Base
                 // Some(mult(rgb_2_2, scalar(0.02))),
                 Some(mult(
@@ -313,8 +320,8 @@ pub fn img_20231002_103537_three_images() {
                         b: 0.19215687,
                     },
                 )),
-            ]);
+            ]));
         },
     )
-    .save("20231002_103537_2.jpg");
+    .save_via_chunks("20231002_103537_2.jpg");
 }

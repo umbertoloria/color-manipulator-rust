@@ -204,3 +204,39 @@ fn safe_diff_color_value(a: u8, b: u8) -> u8 {
 pub fn create_int_diff_layer(a: Box<dyn IntAbsLayer>, b: Box<dyn IntAbsLayer>) -> IntDiffLayer {
     IntDiffLayer { a, b }
 }
+
+// EXTRACTED LAYER
+pub struct IntExtractedLayer {
+    layer: Box<dyn IntAbsLayer>,
+    top_left_x: usize,
+    top_left_y: usize,
+    bottom_right_x: usize,
+    bottom_right_y: usize,
+}
+impl IntAbsLayer for IntExtractedLayer {
+    fn width(&self) -> usize {
+        self.bottom_right_x - self.top_left_x
+    }
+    fn height(&self) -> usize {
+        self.bottom_right_y - self.top_left_y
+    }
+    fn get_color(&self, x: usize, y: usize) -> Color {
+        self.layer
+            .get_color(self.top_left_x + x, self.top_left_y + y)
+    }
+}
+pub fn create_int_extracted_layer_box(
+    layer: Box<dyn IntAbsLayer>,
+    top_left_x: usize,
+    top_left_y: usize,
+    bottom_right_x: usize,
+    bottom_right_y: usize,
+) -> Box<IntExtractedLayer> {
+    Box::new(IntExtractedLayer {
+        layer,
+        top_left_x,
+        top_left_y,
+        bottom_right_x,
+        bottom_right_y,
+    })
+}

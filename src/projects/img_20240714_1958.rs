@@ -3,11 +3,13 @@ use crate::int::computing::create_mean_canvas_layer_from_int_layer;
 use crate::int::int_color::rgb_to_color;
 use crate::int::int_layer::{
     create_int_filtered_layer, load_int_file_image_layer, load_int_file_image_layer_box,
-    IntAbsLayer,
+    IntAbsLayer, MultipleLayer,
 };
 use color_manipulator_rust::{add_list, color, get_distance, get_r, POS, RGB};
+use std::collections::HashMap;
 
 fn cell_shading(scalar: f32, num_shades: usize) -> f32 {
+    // Gives from 0.0 to 1.0 in "num_shades" phases.
     let num_shades_f32 = (num_shades - 1) as f32;
     scale_on_shade_excl(scalar, num_shades) as f32 / num_shades_f32
 }
@@ -53,32 +55,77 @@ pub fn img_20240714_1958() {
     let mean_times = 300;
     for i in 0..mean_times {
         let new_canvas = create_mean_canvas_layer_from_int_layer(&canvas as &dyn IntAbsLayer);
-        canvas = new_canvas;
         println!("Painted mean {i}");
+        if i == 51 {
+            create_int_filtered_layer(Box::new(canvas), |c, _, _, _| c)
+                .save(get_path_out("20240714_1958_mean_50.png"));
+        } else if i == 11 {
+            create_int_filtered_layer(Box::new(canvas), |c, _, _, _| c)
+                .save(get_path_out("20240714_1958_mean_10.png"));
+        }
+        canvas = new_canvas;
     }
     create_int_filtered_layer(Box::new(canvas), |c, _, _, _| c)
         .save(get_path_out("20240714_1958_mean_300.png"));
 
     // Real image
-    create_int_filtered_layer(
-        // load_int_file_image_layer_box("./input/20240714_1958.png"),
-        load_int_file_image_layer_box("./out/20240714_1958_mean_300.png"),
-        |c, p, width, height| {
-            let c = c.to_rgb();
-            let p = p.to_pos(width, height);
+    MultipleLayer::new(
+        load_int_file_image_layer_box("./input/20240714_1958.png"),
+        HashMap::from([
+            // Layer with mean
+            (
+                10,
+                load_int_file_image_layer_box("./out/20240714_1958_mean_10.png"),
+            ),
+            (
+                50,
+                load_int_file_image_layer_box("./out/20240714_1958_mean_50.png"),
+            ),
+            (
+                300,
+                load_int_file_image_layer_box("./out/20240714_1958_mean_300.png"),
+            ),
+        ]),
+        |c, _p, width, height, others| {
+            let c_0 = c.to_rgb();
+            let p = _p.to_pos(width, height);
+
+            let c_10 = others.get(&10).unwrap();
+            let c_50 = others.get(&50).unwrap();
+            let c_300 = others.get(&300).unwrap();
 
             let center = POS { x: 0.48, y: 0.555 };
             let closer_from_center = set_boundaries(1.0 - get_distance(p, center) * 1.8);
             let shaded_value_gradient = cell_shading(closer_from_center, 5);
-
-            return rgb_to_color(add_list(&[
-                Some(color(0.0, 0.03, 0.4)),
-                Some(color(
-                    get_r(c) * cell_shading(shaded_value_gradient, 5),
-                    0.0,
-                    0.0,
-                )),
-            ]));
+            let cell_shading_phases = cell_shading(shaded_value_gradient, 5);
+            if cell_shading_phases == 0.0 {
+                rgb_to_color(add_list(&[Some(color(0.0, 0.03, 0.4))]))
+            } else if cell_shading_phases == 0.25 {
+                let c = c_300.get_color(_p.x, _p.y).to_rgb();
+                rgb_to_color(add_list(&[
+                    Some(color(0.0, 0.03, 0.4)),
+                    Some(color(get_r(c) * cell_shading_phases, 0.0, 0.0)),
+                ]))
+            } else if cell_shading_phases == 0.5 {
+                let c = c_50.get_color(_p.x, _p.y).to_rgb();
+                rgb_to_color(add_list(&[
+                    Some(color(0.0, 0.03, 0.4)),
+                    Some(color(get_r(c) * cell_shading_phases, 0.0, 0.0)),
+                ]))
+            } else if cell_shading_phases == 0.75 {
+                let c = c_10.get_color(_p.x, _p.y).to_rgb();
+                rgb_to_color(add_list(&[
+                    Some(color(0.0, 0.03, 0.4)),
+                    Some(color(get_r(c) * cell_shading_phases, 0.0, 0.0)),
+                ]))
+            // } else if cell_shading_phases == 1.0 {
+            } else {
+                let c = c_0;
+                rgb_to_color(add_list(&[
+                    Some(color(0.0, 0.03, 0.4)),
+                    Some(color(get_r(c) * cell_shading_phases, 0.0, 0.0)),
+                ]))
+            }
         },
     )
     .save(get_path_out("20240714_1958.png"));

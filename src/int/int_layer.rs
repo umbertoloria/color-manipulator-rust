@@ -3,6 +3,7 @@ use crate::int::chunking_layer::split_layer_in_chunks_and_save_parts_and_combine
 use crate::int::int_color::Color;
 use crate::int::int_img_buffer::IntImgBuffer;
 use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb};
+use std::collections::HashMap;
 use std::process::exit;
 
 // ABS LAYER
@@ -58,7 +59,7 @@ impl IntAbsLayer for IntFileImageLayer {
 pub fn load_int_file_image_layer(path: &str) -> IntFileImageLayer {
     IntFileImageLayer::new(path)
 }
-pub fn load_int_file_image_layer_box(path: &str) -> Box<IntFileImageLayer> {
+pub fn load_int_file_image_layer_box(path: &str) -> Box<dyn IntAbsLayer> {
     Box::new(IntFileImageLayer::new(path))
 }
 
@@ -98,6 +99,60 @@ pub fn create_int_filtered_layer(
     IntFilteredLayer {
         layer,
         calculate_color_func,
+    }
+}
+
+// MULTIPLE LAYER
+type MultipleLayerFn = fn(
+    c: Color,
+    p: Coord,
+    width: usize,
+    height: usize,
+    others: &HashMap<usize, Box<dyn IntAbsLayer>>,
+) -> Color;
+pub struct MultipleLayer {
+    layer: Box<dyn IntAbsLayer>,
+    others: HashMap<usize, Box<dyn IntAbsLayer>>,
+    calculate_color_func: MultipleLayerFn,
+}
+impl MultipleLayer {
+    pub fn new(
+        layer: Box<dyn IntAbsLayer>,
+        others: HashMap<usize, Box<dyn IntAbsLayer>>,
+        calculate_color_func: MultipleLayerFn,
+    ) -> Self {
+        Self {
+            layer,
+            others,
+            calculate_color_func,
+        }
+    }
+    pub fn save(&self, filepath: String) {
+        let abs_layer: &dyn IntAbsLayer = self;
+        abs_layer.save(&filepath);
+    }
+    pub fn save_via_chunks(&self, filename: &str) {
+        let abs_layer: &dyn IntAbsLayer = self;
+        split_layer_in_chunks_and_save_parts_and_combined(abs_layer, &filename, 32);
+    }
+}
+impl IntAbsLayer for MultipleLayer {
+    fn width(&self) -> usize {
+        self.layer.width()
+    }
+    fn height(&self) -> usize {
+        self.layer.height()
+    }
+    fn get_color(&self, x: usize, y: usize) -> Color {
+        let in_color = self.layer.get_color(x, y);
+        let in_position = Coord { x, y };
+        (self.calculate_color_func)(
+            in_color,
+            in_position,
+            self.width(),
+            self.height(),
+            &self.others,
+        )
     }
 }
 

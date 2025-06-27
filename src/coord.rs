@@ -70,3 +70,9 @@ pub fn get_coord_chunks(chunks_count: usize, width: usize, height: usize) -> Vec
 
     result
 }
+
+pub fn get_distance_coord(pos: Coord, center: Coord) -> usize {
+    let diff_x = (pos.x - center.x) as f64;
+    let diff_y = (pos.y - center.y) as f64;
+    (diff_x * diff_x + diff_y * diff_y).sqrt() as usize
+}

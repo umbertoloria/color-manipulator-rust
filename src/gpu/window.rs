@@ -1,10 +1,11 @@
+use crate::gpu::renderer_backend::pipeline_builder::PipelineBuilder;
 use glfw::{fail_on_errors, Action, Context, Key, Window, WindowEvent};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features, Instance,
     InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations, PowerPreference, Queue,
-    RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptionsBase, StoreOp, Surface,
-    SurfaceConfiguration, SurfaceError, TextureUsages, Trace,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
+    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureUsages, Trace,
 };
 
 struct State<'a> {
@@ -15,6 +16,7 @@ struct State<'a> {
     config: SurfaceConfiguration,
     size: (i32, i32),
     window: &'a mut Window,
+    render_pipeline: RenderPipeline,
 }
 impl<'a> State<'a> {
     async fn new(window: &'a mut Window) -> Self {
@@ -63,6 +65,11 @@ impl<'a> State<'a> {
         };
         surface.configure(&device, &config);
 
+        let mut pipeline_builder = PipelineBuilder::new();
+        pipeline_builder.set_shader_module("gpu/shaders/shader.wgsl", "vs_main", "fs_main");
+        pipeline_builder.set_pixel_format(config.format);
+        let render_pipeline = pipeline_builder.build_pipeline(&device);
+
         Self {
             instance,
             surface,
@@ -71,6 +78,7 @@ impl<'a> State<'a> {
             config,
             size,
             window,
+            render_pipeline,
         }
     }
 
@@ -107,7 +115,11 @@ impl<'a> State<'a> {
             timestamp_writes: None,
         };
 
-        command_encoder.begin_render_pass(&render_pass_descriptor);
+        {
+            let mut renderpass = command_encoder.begin_render_pass(&render_pass_descriptor);
+            renderpass.set_pipeline(&self.render_pipeline);
+            renderpass.draw(0..3, 0..1);
+        }
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
         drawable.present();

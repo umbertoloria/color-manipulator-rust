@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+glfw = "0.59.0"
 image = "0.25.2"
 regex = "1.10.6"

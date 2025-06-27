@@ -14,12 +14,10 @@ pub fn safe_color(c: f32) -> f32 {
 pub fn filter_scalar(scalar: f32, min: f32, max: f32) -> f32 {
     if scalar < min {
         min
+    } else if scalar > max {
+        max
     } else {
-        if scalar > max {
-            max
-        } else {
-            scalar
-        }
+        scalar
     }
 }
 pub fn filter_color(c: RGB, min: f32, max: f32) -> RGB {

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 glfw = "0.59.0"
+glm = "0.2.3"
 image = "0.25.2"
 pollster = "0.4.0"
 regex = "1.10.6"

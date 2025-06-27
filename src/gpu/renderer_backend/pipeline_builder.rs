@@ -4,7 +4,7 @@ use wgpu::{
     BlendState, ColorTargetState, ColorWrites, Face, FragmentState, FrontFace, MultisampleState,
     PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode, PrimitiveState,
     PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor,
-    ShaderSource, TextureFormat, VertexState,
+    ShaderSource, TextureFormat, VertexBufferLayout, VertexState,
 };
 
 pub struct PipelineBuilder {
@@ -12,6 +12,7 @@ pub struct PipelineBuilder {
     vertex_entry: String,
     fragment_entry: String,
     pixel_format: TextureFormat,
+    vertex_buffer_layout: Vec<VertexBufferLayout<'static>>,
 }
 impl PipelineBuilder {
     pub fn new() -> Self {
@@ -20,7 +21,12 @@ impl PipelineBuilder {
             vertex_entry: "dummy".into(),
             fragment_entry: "dummy".into(),
             pixel_format: TextureFormat::Rgba8Unorm,
+            vertex_buffer_layout: Vec::new(),
         }
+    }
+
+    pub fn add_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) {
+        self.vertex_buffer_layout.push(layout);
     }
 
     pub fn set_shader_module(
@@ -72,7 +78,7 @@ impl PipelineBuilder {
                 module: &shader_module,
                 entry_point: Some(&self.vertex_entry),
                 compilation_options: PipelineCompilationOptions::default(),
-                buffers: &[],
+                buffers: &self.vertex_buffer_layout,
             },
 
             primitive: PrimitiveState {

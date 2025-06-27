@@ -18,5 +18,5 @@ fn main() {
 
     // test_img_diffs();
 
-    gpu_main();
+    pollster::block_on(gpu_main());
 }

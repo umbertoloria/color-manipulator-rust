@@ -1,12 +1,13 @@
-use crate::gpu::renderer_backend::mesh_builder::{make_triangle, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::{make_quad, make_triangle, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline_builder::PipelineBuilder;
-use glfw::{fail_on_errors, Action, Context, Key, Window, WindowEvent};
+use glfw::{fail_on_errors, Action, Key, Window, WindowEvent};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Backends, Buffer, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features,
-    Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations, PowerPreference, Queue,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
-    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureUsages, Trace,
+    IndexFormat, Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations,
+    PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline,
+    RequestAdapterOptionsBase, StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureUsages,
+    Trace,
 };
 
 struct State<'a> {
@@ -19,6 +20,7 @@ struct State<'a> {
     window: &'a mut Window,
     render_pipeline: RenderPipeline,
     triangle_mesh: Buffer,
+    quad_mesh: Mesh,
 }
 impl<'a> State<'a> {
     async fn new(window: &'a mut Window) -> Self {
@@ -68,6 +70,7 @@ impl<'a> State<'a> {
         surface.configure(&device, &config);
 
         let triangle_mesh = make_triangle(&device);
+        let quad_mesh = make_quad(&device);
 
         let mut pipeline_builder = PipelineBuilder::new();
         pipeline_builder.add_buffer_layout(Vertex::get_layout());
@@ -85,6 +88,7 @@ impl<'a> State<'a> {
             window,
             render_pipeline,
             triangle_mesh,
+            quad_mesh,
         }
     }
 
@@ -124,6 +128,11 @@ impl<'a> State<'a> {
         {
             let mut renderpass = command_encoder.begin_render_pass(&render_pass_descriptor);
             renderpass.set_pipeline(&self.render_pipeline);
+
+            renderpass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
+            renderpass.set_index_buffer(self.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
+            renderpass.draw_indexed(0..self.quad_mesh.index_buffer_len, 0, 0..1);
+
             renderpass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
             renderpass.draw(0..3, 0..1);
         }

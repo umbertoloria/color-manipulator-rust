@@ -1,8 +1,8 @@
 use glm::Vec3;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
-    vertex_attr_array, Buffer, BufferUsages, Device, VertexAttribute, VertexBufferLayout,
-    VertexStepMode,
+    vertex_attr_array, Buffer, BufferAddress, BufferUsages, Device, VertexAttribute,
+    VertexBufferLayout, VertexStepMode,
 };
 
 #[repr(C)]
@@ -34,7 +34,7 @@ impl Vertex {
             },
         ];*/
         VertexBufferLayout {
-            array_stride: size_of::<Vertex>() as u64,
+            array_stride: size_of::<Vertex>() as BufferAddress,
             step_mode: VertexStepMode::Vertex,
             attributes: &ATTRIBUTES,
         }
@@ -46,7 +46,7 @@ unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
 }
 
 pub fn make_triangle(device: &Device) -> Buffer {
-    let vertices: [Vertex; 3] = [
+    let vertices = [
         Vertex {
             position: Vec3::new(-0.75, -0.75, 0.0),
             color: Vec3::new(1.0, 0.0, 0.0),
@@ -71,7 +71,7 @@ pub fn make_triangle(device: &Device) -> Buffer {
 }
 
 pub fn make_quad(device: &Device) -> Mesh {
-    let vertices: [Vertex; 4] = [
+    let vertices = [
         Vertex {
             position: Vec3::new(-0.75, -0.75, 0.0),
             color: Vec3::new(1.0, 0.0, 0.0),
@@ -97,8 +97,9 @@ pub fn make_quad(device: &Device) -> Mesh {
     };
     let vertex_buffer = device.create_buffer_init(&vertex_buffer_descriptor);
 
-    let indices: [u16; 6] = [0, 1, 2, 0, 2, 3];
-    let indices_bytes: &[u8] = unsafe { any_as_u8_slice(&indices) };
+    // Typing "u16" is important!
+    let indices: [u16; 6] = [0, 1, 2, 2, 3, 0];
+    let indices_bytes = unsafe { any_as_u8_slice(&indices) };
     let index_buffer_descriptor = BufferInitDescriptor {
         label: Some("Quad index buffer"),
         contents: indices_bytes,

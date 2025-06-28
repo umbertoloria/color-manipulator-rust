@@ -1,28 +1,34 @@
-use std::env::current_dir;
+use crate::gpu::make_safe_filepath;
 use std::fs::read_to_string;
 use wgpu::{
-    BlendState, ColorTargetState, ColorWrites, Face, FragmentState, FrontFace, MultisampleState,
-    PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode, PrimitiveState,
-    PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor,
-    ShaderSource, TextureFormat, VertexBufferLayout, VertexState,
+    BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState, FrontFace,
+    MultisampleState, PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode,
+    PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor,
+    ShaderModuleDescriptor, ShaderSource, TextureFormat, VertexBufferLayout, VertexState,
 };
 
-pub struct PipelineBuilder {
+pub struct PipelineBuilder<'a> {
     shader_filename: String,
     vertex_entry: String,
     fragment_entry: String,
     pixel_format: TextureFormat,
     vertex_buffer_layouts: Vec<VertexBufferLayout<'static>>,
+    device: &'a Device,
 }
-impl PipelineBuilder {
-    pub fn new() -> Self {
+impl<'a> PipelineBuilder<'a> {
+    pub fn new(device: &'a Device) -> Self {
         Self {
             shader_filename: "dummy".into(),
             vertex_entry: "dummy".into(),
             fragment_entry: "dummy".into(),
             pixel_format: TextureFormat::Rgba8Unorm,
             vertex_buffer_layouts: Vec::new(),
+            device,
         }
+    }
+
+    fn reset(&mut self) {
+        self.vertex_buffer_layouts.clear();
     }
 
     pub fn add_vertex_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) {
@@ -44,25 +50,24 @@ impl PipelineBuilder {
         self.pixel_format = pixel_format;
     }
 
-    pub fn build(&mut self, device: &wgpu::Device) -> RenderPipeline {
-        let mut filepath = current_dir().unwrap();
-        filepath.push("src/");
-        filepath.push(self.shader_filename.as_str());
-        let filepath = filepath.into_os_string().into_string().unwrap();
-        let source_code = read_to_string(filepath).expect("Can't read source code!");
+    pub fn build(&mut self) -> RenderPipeline {
+        let source_code = read_to_string(make_safe_filepath(&self.shader_filename))
+            .expect("Can't read source code!");
 
         let shader_module_descriptor = ShaderModuleDescriptor {
             label: Some("Shader Module"),
             source: ShaderSource::Wgsl(source_code.into()),
         };
-        let shader_module = device.create_shader_module(shader_module_descriptor);
+        let shader_module = self.device.create_shader_module(shader_module_descriptor);
 
         let pipeline_layout_descriptor = PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         };
-        let pipeline_layout = device.create_pipeline_layout(&pipeline_layout_descriptor);
+        let pipeline_layout = self
+            .device
+            .create_pipeline_layout(&pipeline_layout_descriptor);
 
         let render_targets = [Some(ColorTargetState {
             format: self.pixel_format,
@@ -109,6 +114,12 @@ impl PipelineBuilder {
             cache: None, // Use cache?
         };
 
-        device.create_render_pipeline(&render_pipeline_descriptor)
+        let render_pipeline = self
+            .device
+            .create_render_pipeline(&render_pipeline_descriptor);
+
+        self.reset();
+
+        render_pipeline
     }
 }

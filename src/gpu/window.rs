@@ -72,11 +72,13 @@ impl<'a> State<'a> {
         let triangle_mesh = make_triangle(&device);
         let quad_mesh = make_quad(&device);
 
-        let mut pipeline_builder = PipelineBuilder::new();
-        pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
-        pipeline_builder.set_shader_module("gpu/shaders/shader.wgsl", "vs_main", "fs_main");
-        pipeline_builder.set_pixel_format(config.format);
-        let render_pipeline = pipeline_builder.build(&device);
+        let render_pipeline = {
+            let mut pipeline_builder = PipelineBuilder::new(&device);
+            pipeline_builder.set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main");
+            pipeline_builder.set_pixel_format(config.format);
+            pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
+            pipeline_builder.build()
+        };
 
         Self {
             instance,

@@ -1,5 +1,5 @@
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
-use crate::gpu::renderer_backend::material::Material;
+use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_quad, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
@@ -87,7 +87,6 @@ impl<'a> State<'a> {
             pipeline_builder.build("Render Pipeline")
         };
 
-        let quad_mesh = make_quad(&device);
         let quad_material = Material::new(
             "input/20230301_224920.jpg",
             &device,
@@ -95,6 +94,12 @@ impl<'a> State<'a> {
             "Quad Material",
             &material_bind_group_layout,
         );
+
+        let quad_texture_ratio =
+            calculate_ratio(quad_material.width as f32, quad_material.height as f32);
+        // println!("Image aspect ratio: {}", quad_texture_ratio);
+
+        let quad_mesh = make_quad(quad_texture_ratio, &device);
 
         /*
         let triangle_mesh = make_triangle(&device);
@@ -202,8 +207,8 @@ pub async fn gpu_main() {
 
     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
 
-    const WIN_WIDTH: u32 = 800;
-    const WIN_HEIGHT: u32 = 600;
+    const WIN_WIDTH: u32 = 900;
+    const WIN_HEIGHT: u32 = 900;
     const WIN_TITLE: &str = "Window title";
 
     let (mut window, events) = glfw

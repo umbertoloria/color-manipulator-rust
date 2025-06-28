@@ -1,4 +1,4 @@
-use glm::Vec3;
+use glm::{Vec2, Vec3};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
     vertex_attr_array, Buffer, BufferAddress, BufferUsages, Device, VertexAttribute,
@@ -9,6 +9,7 @@ use wgpu::{
 pub struct Vertex {
     position: Vec3,
     color: Vec3,
+    tex_coord: Vec2,
 }
 
 pub struct Mesh {
@@ -19,7 +20,8 @@ pub struct Mesh {
 
 impl Vertex {
     pub fn get_layout() -> VertexBufferLayout<'static> {
-        const ATTRIBUTES: [VertexAttribute; 2] = vertex_attr_array![0 => Float32x3, 1 => Float32x3];
+        const ATTRIBUTES: [VertexAttribute; 3] =
+            vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2];
         /* // Or...
         const ATTRIBUTES: [VertexAttribute] = [
             VertexAttribute {
@@ -31,6 +33,11 @@ impl Vertex {
                 format: VertexFormat::Float32x3,
                 offset: size_of::<Vec3>::(),
                 shader_location: 1,
+            },
+            VertexAttribute {
+                format: VertexFormat::Float32x2,
+                offset: size_of::<Vec2>::(),
+                shader_location: 2,
             },
         ];*/
         VertexBufferLayout {
@@ -50,14 +57,17 @@ pub fn make_triangle(device: &Device) -> Buffer {
         Vertex {
             position: Vec3::new(-0.75, -0.75, 0.0),
             color: Vec3::new(1.0, 0.0, 0.0),
+            tex_coord: Vec2::new(0.0, 1.0),
         },
         Vertex {
             position: Vec3::new(0.75, -0.75, 0.0),
             color: Vec3::new(0.0, 1.0, 0.0),
+            tex_coord: Vec2::new(1.0, 1.0),
         },
         Vertex {
             position: Vec3::new(0.0, 0.75, 0.0),
             color: Vec3::new(0.0, 0.0, 1.0),
+            tex_coord: Vec2::new(0.5, 0.0),
         },
     ];
     let vertices_bytes = unsafe { any_as_u8_slice(&vertices) };
@@ -70,23 +80,27 @@ pub fn make_triangle(device: &Device) -> Buffer {
     vertex_buffer
 }
 
-pub fn make_quad(device: &Device) -> Mesh {
+pub fn make_quad(ratio: f32, device: &Device) -> Mesh {
     let vertices = [
         Vertex {
-            position: Vec3::new(-0.75, -0.75, 0.0),
-            color: Vec3::new(1.0, 0.0, 0.0),
+            position: Vec3::new(-1.0, -1.0 / ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0),
+            tex_coord: Vec2::new(0.0, 1.0),
         },
         Vertex {
-            position: Vec3::new(0.75, -0.75, 0.0),
-            color: Vec3::new(0.0, 1.0, 0.0),
+            position: Vec3::new(1.0, -1.0 / ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0),
+            tex_coord: Vec2::new(1.0, 1.0),
         },
         Vertex {
-            position: Vec3::new(0.75, 0.75, 0.0),
-            color: Vec3::new(0.0, 0.0, 1.0),
+            position: Vec3::new(1.0, 1.0 / ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0),
+            tex_coord: Vec2::new(1.0, 0.0),
         },
         Vertex {
-            position: Vec3::new(-0.75, 0.75, 0.0),
-            color: Vec3::new(0.0, 1.0, 1.0),
+            position: Vec3::new(-1.0, 1.0 / ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0),
+            tex_coord: Vec2::new(0.0, 0.0),
         },
     ];
     let vertices_bytes = unsafe { any_as_u8_slice(&vertices) };

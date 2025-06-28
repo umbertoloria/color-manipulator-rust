@@ -10,6 +10,8 @@ use wgpu::{
 };
 
 pub struct Material {
+    pub width: u32,
+    pub height: u32,
     pub bind_group: BindGroup,
 }
 impl Material {
@@ -24,13 +26,12 @@ impl Material {
 
         let loaded_image = image::load_from_memory(&bytes).unwrap();
         let converted = loaded_image.to_rgba8();
-        let size = loaded_image.dimensions();
-
-        // println!("Image size: {} x {}", size.0, size.1);
+        let (width, height) = loaded_image.dimensions();
+        // println!("Image size: {} x {}", width, height);
 
         let texture_size = Extent3d {
-            width: size.0,
-            height: size.1,
+            width,
+            height,
             depth_or_array_layers: 1,
         };
 
@@ -56,8 +57,8 @@ impl Material {
             &converted,
             TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(size.0 * 4),
-                rows_per_image: Some(size.1),
+                bytes_per_row: Some(width * 4),
+                rows_per_image: Some(height),
             },
             texture_size,
         );
@@ -81,8 +82,13 @@ impl Material {
         let bind_group = bind_group_builder.build(label);
 
         Self {
-            //
+            width,
+            height,
             bind_group,
         }
     }
+}
+
+pub fn calculate_ratio(width: f32, height: f32) -> f32 {
+    width / height
 }

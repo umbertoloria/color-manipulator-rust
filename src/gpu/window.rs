@@ -5,10 +5,10 @@ use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, IndexFormat,
-    Instance, InstanceDescriptor, LoadOp, Operations, PowerPreference, Queue,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
-    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureFormat, TextureUsages,
+    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, IndexFormat, Instance,
+    InstanceDescriptor, LoadOp, Operations, PowerPreference, Queue, RenderPassColorAttachment,
+    RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase, StoreOp, Surface,
+    SurfaceConfiguration, SurfaceError, TextureFormat, TextureUsages,
 };
 
 struct State<'a> {
@@ -145,15 +145,15 @@ impl<'a> State<'a> {
 
     fn render(&mut self) -> Result<(), SurfaceError> {
         let drawable = self.surface.get_current_texture()?;
-        let image_view_descriptor = TextureViewDescriptor::default();
-        let image_view = drawable.texture.create_view(&image_view_descriptor);
+        let image_view = drawable
+            .texture
+            .create_view(&TextureViewDescriptor::default());
 
-        let command_encoder_descriptor = CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        };
         let mut command_encoder = self
             .device
-            .create_command_encoder(&command_encoder_descriptor);
+            .create_command_encoder(&CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         let color_attachment = RenderPassColorAttachment {
             view: &image_view,
@@ -168,16 +168,15 @@ impl<'a> State<'a> {
                 store: StoreOp::Store,
             },
         };
-        let render_pass_descriptor = RenderPassDescriptor {
-            label: Some("Render Pass"),
-            color_attachments: &[Some(color_attachment)],
-            depth_stencil_attachment: None,
-            occlusion_query_set: None,
-            timestamp_writes: None,
-        };
 
         {
-            let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
+            let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(color_attachment)],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
             render_pass.set_pipeline(&self.render_pipeline);
 
             render_pass.set_bind_group(0, &self.quad_material.bind_group, &[]);

@@ -37,11 +37,11 @@ impl Material {
 
         let texture_descriptor = TextureDescriptor {
             label: Some(label),
+            size: texture_size,
             mip_level_count: 1,
+            sample_count: 1,
             dimension: TextureDimension::D2,
             format: TextureFormat::Rgba8UnormSrgb,
-            size: texture_size,
-            sample_count: 1,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             view_formats: &[TextureFormat::Rgba8UnormSrgb],
         };

@@ -1,15 +1,14 @@
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::Material;
-use crate::gpu::renderer_backend::mesh_builder::{make_quad, make_triangle, Mesh, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::{make_quad, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Backends, Buffer, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features,
-    IndexFormat, Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations,
-    PowerPreference, Queue, RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline,
-    RequestAdapterOptionsBase, StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureUsages,
-    Trace,
+    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features, IndexFormat,
+    Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations, PowerPreference, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
+    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureUsages, Trace,
 };
 
 struct State<'a> {
@@ -21,10 +20,10 @@ struct State<'a> {
     size: (i32, i32),
     window: &'a mut Window,
     render_pipeline: RenderPipeline,
-    triangle_mesh: Buffer,
     quad_mesh: Mesh,
-    triangle_material: Material,
     quad_material: Material,
+    // triangle_mesh: Buffer,
+    // triangle_material: Material,
 }
 impl<'a> State<'a> {
     async fn new(window: &'a mut Window) -> Self {
@@ -73,9 +72,6 @@ impl<'a> State<'a> {
         };
         surface.configure(&device, &config);
 
-        let triangle_mesh = make_triangle(&device);
-        let quad_mesh = make_quad(&device);
-
         let material_bind_group_layout = {
             let mut bind_group_layout_builder = BindGroupLayoutBuilder::new(&device);
             bind_group_layout_builder.add_material();
@@ -91,13 +87,7 @@ impl<'a> State<'a> {
             pipeline_builder.build("Render Pipeline")
         };
 
-        let triangle_material = Material::new(
-            "input/20240714_1958.png",
-            &device,
-            &queue,
-            "Triangle Material",
-            &material_bind_group_layout,
-        );
+        let quad_mesh = make_quad(&device);
         let quad_material = Material::new(
             "input/20230301_224920.jpg",
             &device,
@@ -105,6 +95,17 @@ impl<'a> State<'a> {
             "Quad Material",
             &material_bind_group_layout,
         );
+
+        /*
+        let triangle_mesh = make_triangle(&device);
+        let triangle_material = Material::new(
+            "input/20240714_1958.png",
+            &device,
+            &queue,
+            "Triangle Material",
+            &material_bind_group_layout,
+        );
+        */
 
         Self {
             instance,
@@ -115,10 +116,10 @@ impl<'a> State<'a> {
             size,
             window,
             render_pipeline,
-            triangle_mesh,
             quad_mesh,
-            triangle_material,
             quad_material,
+            // triangle_mesh,
+            // triangle_material,
         }
     }
 
@@ -156,17 +157,20 @@ impl<'a> State<'a> {
         };
 
         {
-            let mut renderpass = command_encoder.begin_render_pass(&render_pass_descriptor);
-            renderpass.set_pipeline(&self.render_pipeline);
+            let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
+            render_pass.set_pipeline(&self.render_pipeline);
 
-            renderpass.set_bind_group(0, &self.quad_material.bind_group, &[]);
-            renderpass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
-            renderpass.set_index_buffer(self.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
-            renderpass.draw_indexed(0..self.quad_mesh.index_buffer_len, 0, 0..1);
+            render_pass.set_bind_group(0, &self.quad_material.bind_group, &[]);
+            render_pass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
+            render_pass
+                .set_index_buffer(self.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.quad_mesh.index_buffer_len, 0, 0..1);
 
-            renderpass.set_bind_group(0, &self.triangle_material.bind_group, &[]);
-            renderpass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
-            renderpass.draw(0..3, 0..1);
+            /*
+            render_pass.set_bind_group(0, &self.triangle_material.bind_group, &[]);
+            render_pass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
+            render_pass.draw(0..3, 0..1);
+            */
         }
         self.queue.submit(std::iter::once(command_encoder.finish()));
 

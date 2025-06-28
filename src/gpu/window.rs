@@ -5,10 +5,10 @@ use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features, IndexFormat,
-    Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations, PowerPreference, Queue,
+    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, IndexFormat,
+    Instance, InstanceDescriptor, LoadOp, Operations, PowerPreference, Queue,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
-    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureFormat, TextureUsages, Trace,
+    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureFormat, TextureUsages,
 };
 
 struct State<'a> {
@@ -36,13 +36,16 @@ impl<'a> State<'a> {
         let instance = Instance::new(&instance_descriptor);
         let surface = Self::create_wgpu_surface(&instance, window);
 
-        let adapter_descriptor = RequestAdapterOptionsBase {
-            power_preference: PowerPreference::default(),
-            compatible_surface: Some(&surface),
-            force_fallback_adapter: false,
-        };
-        let adapter = instance.request_adapter(&adapter_descriptor).await.unwrap();
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptionsBase {
+                power_preference: PowerPreference::default(),
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await
+            .unwrap();
 
+        /*
         let device_descriptor = DeviceDescriptor {
             label: Some("Device"),
             required_features: Features::empty(),
@@ -50,7 +53,11 @@ impl<'a> State<'a> {
             memory_hints: MemoryHints::default(),
             trace: Trace::default(),
         };
-        let (device, queue) = adapter.request_device(&device_descriptor).await.unwrap();
+        */
+        let (device, queue) = adapter
+            .request_device(&DeviceDescriptor::default())
+            .await
+            .unwrap();
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         /*

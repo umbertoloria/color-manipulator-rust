@@ -144,35 +144,34 @@ impl<'a> State<'a> {
     }
 
     fn render(&mut self) -> Result<(), SurfaceError> {
+        // Texture View: render on Window.
         let drawable = self.surface.get_current_texture()?;
-        let image_view = drawable
+        let texture_view = drawable
             .texture
             .create_view(&TextureViewDescriptor::default());
 
-        let mut command_encoder = self
-            .device
-            .create_command_encoder(&CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
-
-        let color_attachment = RenderPassColorAttachment {
-            view: &image_view,
-            resolve_target: None,
-            ops: Operations {
-                load: LoadOp::Clear(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.0,
-                }),
-                store: StoreOp::Store,
-            },
+        // Command Encoder
+        let c_e_descriptor = CommandEncoderDescriptor {
+            label: Some("Render Encoder"),
         };
-
+        let mut command_encoder = self.device.create_command_encoder(&c_e_descriptor);
         {
+            let render_pass_color_attachment = RenderPassColorAttachment {
+                view: &texture_view,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Clear(Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.0,
+                    }),
+                    store: StoreOp::Store,
+                },
+            };
             let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
                 label: Some("Render Pass"),
-                color_attachments: &[Some(color_attachment)],
+                color_attachments: &[Some(render_pass_color_attachment)],
                 depth_stencil_attachment: None,
                 occlusion_query_set: None,
                 timestamp_writes: None,
@@ -191,8 +190,10 @@ impl<'a> State<'a> {
             render_pass.draw(0..3, 0..1);
             */
         }
-        self.queue.submit(std::iter::once(command_encoder.finish()));
 
+        self.queue.submit(Some(command_encoder.finish()));
+
+        // Draw on a Window.
         drawable.present();
 
         Ok(())

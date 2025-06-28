@@ -1,5 +1,5 @@
 use crate::gpu::renderer_backend::mesh_builder::{make_quad, make_triangle, Mesh, Vertex};
-use crate::gpu::renderer_backend::pipeline_builder::PipelineBuilder;
+use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, Key, Window, WindowEvent};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -73,10 +73,10 @@ impl<'a> State<'a> {
         let quad_mesh = make_quad(&device);
 
         let mut pipeline_builder = PipelineBuilder::new();
-        pipeline_builder.add_buffer_layout(Vertex::get_layout());
+        pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
         pipeline_builder.set_shader_module("gpu/shaders/shader.wgsl", "vs_main", "fs_main");
         pipeline_builder.set_pixel_format(config.format);
-        let render_pipeline = pipeline_builder.build_pipeline(&device);
+        let render_pipeline = pipeline_builder.build(&device);
 
         Self {
             instance,

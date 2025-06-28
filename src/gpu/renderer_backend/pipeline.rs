@@ -12,7 +12,7 @@ pub struct PipelineBuilder {
     vertex_entry: String,
     fragment_entry: String,
     pixel_format: TextureFormat,
-    vertex_buffer_layout: Vec<VertexBufferLayout<'static>>,
+    vertex_buffer_layouts: Vec<VertexBufferLayout<'static>>,
 }
 impl PipelineBuilder {
     pub fn new() -> Self {
@@ -21,30 +21,30 @@ impl PipelineBuilder {
             vertex_entry: "dummy".into(),
             fragment_entry: "dummy".into(),
             pixel_format: TextureFormat::Rgba8Unorm,
-            vertex_buffer_layout: Vec::new(),
+            vertex_buffer_layouts: Vec::new(),
         }
     }
 
-    pub fn add_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) {
-        self.vertex_buffer_layout.push(layout);
+    pub fn add_vertex_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) {
+        self.vertex_buffer_layouts.push(layout);
     }
 
     pub fn set_shader_module(
         &mut self,
         shader_filename: &str,
         vertex_entry: &str,
-        fragment_enty: &str,
+        fragment_entry: &str,
     ) {
         self.shader_filename = shader_filename.into();
         self.vertex_entry = vertex_entry.into();
-        self.fragment_entry = fragment_enty.into();
+        self.fragment_entry = fragment_entry.into();
     }
 
     pub fn set_pixel_format(&mut self, pixel_format: TextureFormat) {
         self.pixel_format = pixel_format;
     }
 
-    pub fn build_pipeline(&mut self, device: &wgpu::Device) -> RenderPipeline {
+    pub fn build(&mut self, device: &wgpu::Device) -> RenderPipeline {
         let mut filepath = current_dir().unwrap();
         filepath.push("src/");
         filepath.push(self.shader_filename.as_str());
@@ -78,7 +78,7 @@ impl PipelineBuilder {
                 module: &shader_module,
                 entry_point: Some(&self.vertex_entry),
                 compilation_options: PipelineCompilationOptions::default(),
-                buffers: &self.vertex_buffer_layout,
+                buffers: &self.vertex_buffer_layouts,
             },
 
             primitive: PrimitiveState {

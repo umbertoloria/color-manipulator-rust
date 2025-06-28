@@ -39,11 +39,11 @@ impl Material {
             label: Some(label),
             mip_level_count: 1,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8Unorm,
+            format: TextureFormat::Rgba8UnormSrgb,
             size: texture_size,
             sample_count: 1,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
-            view_formats: &[TextureFormat::Rgba8Unorm],
+            view_formats: &[TextureFormat::Rgba8UnormSrgb],
         };
         let texture = device.create_texture(&texture_descriptor);
 

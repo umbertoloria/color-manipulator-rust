@@ -1,6 +1,6 @@
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
-use crate::gpu::renderer_backend::mesh_builder::{make_quad, Mesh, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
 use wgpu::wgt::TextureViewDescriptor;
@@ -8,7 +8,7 @@ use wgpu::{
     Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features, IndexFormat,
     Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints, Operations, PowerPreference, Queue,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
-    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureUsages, Trace,
+    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TextureFormat, TextureUsages, Trace,
 };
 
 struct State<'a> {
@@ -27,7 +27,7 @@ struct State<'a> {
 }
 impl<'a> State<'a> {
     async fn new(window: &'a mut Window) -> Self {
-        let size = window.get_framebuffer_size();
+        let (width, height) = window.get_framebuffer_size();
 
         let instance_descriptor = InstanceDescriptor {
             backends: Backends::all(),
@@ -53,6 +53,7 @@ impl<'a> State<'a> {
         let (device, queue) = adapter.request_device(&device_descriptor).await.unwrap();
 
         let surface_capabilities = surface.get_capabilities(&adapter);
+        /*
         let surface_format = surface_capabilities
             .formats
             .iter()
@@ -60,11 +61,18 @@ impl<'a> State<'a> {
             .filter(|f| f.is_srgb())
             .next()
             .unwrap_or(surface_capabilities.formats[0]);
+        for x in surface_capabilities.formats {
+            println!(" -> {:?}", x);
+        }
+        println!(" PICKED -> {:?}", surface_format);
+        */
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
-            width: size.0 as u32,
-            height: size.1 as u32,
+            // Don't do "format: surface_format" since it picks "Bgra8UnormSrgb" (at least on my PC)
+            // but it's the wrong one.
+            format: TextureFormat::Rgba8UnormSrgb, // Right one.
+            width: width as u32,
+            height: height as u32,
             present_mode: surface_capabilities.present_modes[0],
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: Vec::new(),
@@ -99,7 +107,7 @@ impl<'a> State<'a> {
             calculate_ratio(quad_material.width as f32, quad_material.height as f32);
         // println!("Image aspect ratio: {}", quad_texture_ratio);
 
-        let quad_mesh = make_quad(quad_texture_ratio, &device);
+        let quad_mesh = make_rect(quad_texture_ratio, &device);
 
         /*
         let triangle_mesh = make_triangle(&device);
@@ -118,7 +126,7 @@ impl<'a> State<'a> {
             device,
             queue,
             config,
-            size,
+            size: (width, height),
             window,
             render_pipeline,
             quad_mesh,
@@ -145,9 +153,9 @@ impl<'a> State<'a> {
             resolve_target: None,
             ops: Operations {
                 load: LoadOp::Clear(Color {
-                    r: 0.25,
+                    r: 0.0,
                     g: 0.0,
-                    b: 0.5,
+                    b: 0.0,
                     a: 0.0,
                 }),
                 store: StoreOp::Store,

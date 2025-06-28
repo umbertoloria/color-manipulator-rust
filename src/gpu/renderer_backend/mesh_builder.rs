@@ -80,26 +80,27 @@ pub fn make_triangle(device: &Device) -> Buffer {
     vertex_buffer
 }
 
-pub fn make_quad(ratio: f32, device: &Device) -> Mesh {
+pub fn make_rect(ratio: f32, device: &Device) -> Mesh {
+    let inv_ratio = 1.0 / ratio;
     let vertices = [
         Vertex {
-            position: Vec3::new(-1.0, -1.0 / ratio, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0),
+            position: Vec3::new(-1.0, -inv_ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(0.0, 1.0),
         },
         Vertex {
-            position: Vec3::new(1.0, -1.0 / ratio, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0),
+            position: Vec3::new(1.0, -inv_ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(1.0, 1.0),
         },
         Vertex {
-            position: Vec3::new(1.0, 1.0 / ratio, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0),
+            position: Vec3::new(1.0, inv_ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(1.0, 0.0),
         },
         Vertex {
-            position: Vec3::new(-1.0, 1.0 / ratio, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0),
+            position: Vec3::new(-1.0, inv_ratio, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(0.0, 0.0),
         },
     ];

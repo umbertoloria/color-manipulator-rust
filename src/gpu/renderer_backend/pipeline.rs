@@ -1,8 +1,8 @@
 use crate::gpu::make_safe_filepath;
 use std::fs::read_to_string;
 use wgpu::{
-    BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState, FrontFace,
-    MultisampleState, PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode,
+    BindGroupLayout, BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState,
+    FrontFace, MultisampleState, PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode,
     PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor,
     ShaderModuleDescriptor, ShaderSource, TextureFormat, VertexBufferLayout, VertexState,
 };
@@ -13,6 +13,7 @@ pub struct PipelineBuilder<'a> {
     fragment_entry: String,
     pixel_format: TextureFormat,
     vertex_buffer_layouts: Vec<VertexBufferLayout<'static>>,
+    bind_group_layouts: Vec<&'a BindGroupLayout>,
     device: &'a Device,
 }
 impl<'a> PipelineBuilder<'a> {
@@ -23,16 +24,22 @@ impl<'a> PipelineBuilder<'a> {
             fragment_entry: "dummy".into(),
             pixel_format: TextureFormat::Rgba8Unorm,
             vertex_buffer_layouts: Vec::new(),
+            bind_group_layouts: Vec::new(),
             device,
         }
     }
 
     fn reset(&mut self) {
         self.vertex_buffer_layouts.clear();
+        self.bind_group_layouts.clear();
     }
 
     pub fn add_vertex_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) {
         self.vertex_buffer_layouts.push(layout);
+    }
+
+    pub fn add_bind_group_layout(&mut self, layout: &'a BindGroupLayout) {
+        self.bind_group_layouts.push(layout);
     }
 
     pub fn set_shader_module(
@@ -50,7 +57,7 @@ impl<'a> PipelineBuilder<'a> {
         self.pixel_format = pixel_format;
     }
 
-    pub fn build(&mut self) -> RenderPipeline {
+    pub fn build(&mut self, label: &str) -> RenderPipeline {
         let source_code = read_to_string(make_safe_filepath(&self.shader_filename))
             .expect("Can't read source code!");
 
@@ -61,8 +68,8 @@ impl<'a> PipelineBuilder<'a> {
         let shader_module = self.device.create_shader_module(shader_module_descriptor);
 
         let pipeline_layout_descriptor = PipelineLayoutDescriptor {
-            label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            label: Some(label),
+            bind_group_layouts: &self.bind_group_layouts,
             push_constant_ranges: &[],
         };
         let pipeline_layout = self
@@ -76,7 +83,7 @@ impl<'a> PipelineBuilder<'a> {
         })];
 
         let render_pipeline_descriptor = RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
+            label: Some(label),
             layout: Some(&pipeline_layout),
 
             vertex: VertexState {

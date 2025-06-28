@@ -1,6 +1,8 @@
+use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
+use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::{make_quad, make_triangle, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
-use glfw::{fail_on_errors, Action, Key, Window, WindowEvent};
+use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Backends, Buffer, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Features,
@@ -21,6 +23,8 @@ struct State<'a> {
     render_pipeline: RenderPipeline,
     triangle_mesh: Buffer,
     quad_mesh: Mesh,
+    triangle_material: Material,
+    quad_material: Material,
 }
 impl<'a> State<'a> {
     async fn new(window: &'a mut Window) -> Self {
@@ -72,13 +76,35 @@ impl<'a> State<'a> {
         let triangle_mesh = make_triangle(&device);
         let quad_mesh = make_quad(&device);
 
+        let material_bind_group_layout = {
+            let mut bind_group_layout_builder = BindGroupLayoutBuilder::new(&device);
+            bind_group_layout_builder.add_material();
+            bind_group_layout_builder.build("Material Bind Group Layout")
+        };
+
         let render_pipeline = {
             let mut pipeline_builder = PipelineBuilder::new(&device);
             pipeline_builder.set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main");
             pipeline_builder.set_pixel_format(config.format);
             pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
-            pipeline_builder.build()
+            pipeline_builder.add_bind_group_layout(&material_bind_group_layout);
+            pipeline_builder.build("Render Pipeline")
         };
+
+        let triangle_material = Material::new(
+            "input/20240714_1958.png",
+            &device,
+            &queue,
+            "Triangle Material",
+            &material_bind_group_layout,
+        );
+        let quad_material = Material::new(
+            "input/20230301_224920.jpg",
+            &device,
+            &queue,
+            "Quad Material",
+            &material_bind_group_layout,
+        );
 
         Self {
             instance,
@@ -91,6 +117,8 @@ impl<'a> State<'a> {
             render_pipeline,
             triangle_mesh,
             quad_mesh,
+            triangle_material,
+            quad_material,
         }
     }
 
@@ -131,10 +159,12 @@ impl<'a> State<'a> {
             let mut renderpass = command_encoder.begin_render_pass(&render_pass_descriptor);
             renderpass.set_pipeline(&self.render_pipeline);
 
+            renderpass.set_bind_group(0, &self.quad_material.bind_group, &[]);
             renderpass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
             renderpass.set_index_buffer(self.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
             renderpass.draw_indexed(0..self.quad_mesh.index_buffer_len, 0, 0..1);
 
+            renderpass.set_bind_group(0, &self.triangle_material.bind_group, &[]);
             renderpass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
             renderpass.draw(0..3, 0..1);
         }
@@ -166,6 +196,8 @@ impl<'a> State<'a> {
 pub async fn gpu_main() {
     let mut glfw = glfw::init(fail_on_errors!()).unwrap();
 
+    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
+
     const WIN_WIDTH: u32 = 800;
     const WIN_HEIGHT: u32 = 600;
     const WIN_TITLE: &str = "Window title";
@@ -180,6 +212,7 @@ pub async fn gpu_main() {
     state.window.set_key_polling(true);
     state.window.set_framebuffer_size_polling(true);
     state.window.set_pos_polling(true);
+    // state.window.set_mouse_button_polling(true);
 
     while !state.window.should_close() {
         glfw.poll_events();

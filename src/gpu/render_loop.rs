@@ -2,7 +2,7 @@ use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
-use crate::gpu::state::State;
+use crate::gpu::state::{State, USED_PIXEL_FORMAT};
 use crate::gpu::window::Window;
 use glfw::{flush_messages, Action, Key, WindowEvent};
 use image::{ImageBuffer, Rgba};
@@ -25,10 +25,15 @@ pub fn render_start(
     device: &Device,
     full_width: u32,
     full_height: u32,
-) -> (Texture, TextureView, Buffer) {
+) -> (
+    //
+    Texture,
+    TextureView,
+    Buffer,
+) {
     /*
     // Texture View: render on Window.
-    let drawable = self.surface.get_current_texture().unwrap();
+    let drawable = surface.get_current_texture().unwrap();
     let texture_view = drawable
         .texture
         .create_view(&TextureViewDescriptor::default());
@@ -95,7 +100,7 @@ pub async fn render_finish(
     // Draw on a Window.
     /*
     drawable.present();
-    Ok(RenderResult::GoNextTick)
+    RenderResult::GoNextTick
     */
 
     RenderResult::StopRendering
@@ -116,7 +121,7 @@ pub async fn gpu_main() {
         .build("Material Bind Group Layout");
     let render_pipeline = PipelineBuilder::new(&state.device)
         .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
-        .set_pixel_format(state.surface_config.format)
+        .set_pixel_format(USED_PIXEL_FORMAT)
         .add_vertex_buffer_layout(Vertex::get_layout())
         .add_bind_group_layout(&material_bind_group_layout)
         .build("Render Pipeline");
@@ -160,7 +165,7 @@ pub async fn gpu_main() {
                 WindowEvent::Pos(..) => {
                     // Workaround for Window Move.
                     state.update_surface(&render_context);
-                    state.resize(state.curr_win_size);
+                    state.resize(state.win_state.curr_size);
                 }
 
                 _ => {

@@ -1,12 +1,13 @@
 use crate::gpu::renderer_backend::bind_group::BindGroupBuilder;
 use crate::gpu::shaders::read_file::make_safe_filepath;
+use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use image::GenericImageView;
 use std::fs::read;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     AddressMode, BindGroup, BindGroupLayout, Device, Extent3d, FilterMode, Origin3d, Queue,
     SamplerDescriptor, TexelCopyBufferLayout, TexelCopyTextureInfo, TextureAspect,
-    TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+    TextureDescriptor, TextureDimension, TextureUsages,
 };
 
 pub struct Material {
@@ -41,9 +42,9 @@ impl Material {
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8UnormSrgb,
+            format: USED_PIXEL_FORMAT,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
-            view_formats: &[TextureFormat::Rgba8UnormSrgb],
+            view_formats: &[USED_PIXEL_FORMAT],
         };
         let texture = device.create_texture(&texture_descriptor);
 

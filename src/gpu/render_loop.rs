@@ -1,4 +1,3 @@
-use crate::gpu::glfw::{GlfwWrapper, WindowState};
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
@@ -14,7 +13,7 @@ use wgpu::{
     Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
     TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
-    TextureDimension, TextureFormat, TextureUsages, TextureView,
+    TextureDimension, TextureUsages, TextureView,
 };
 
 const RESULT_GPU_FILENAME: &str = "result.png";
@@ -26,6 +25,7 @@ pub async fn gpu_main() {
     let wgpu_wrapper = WGPUWrapper::new(&instance, None).await;
 
     // Glfw
+    /*
     const WIN_WIDTH: u32 = 900;
     const WIN_HEIGHT: u32 = 900;
     const WIN_TITLE: &str = "Window title";
@@ -43,6 +43,7 @@ pub async fn gpu_main() {
         window_surface,
     );
     let mut glfw_wrapper = GlfwWrapper::new(window_state, glfw_events);
+    */
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&wgpu_wrapper.device)
@@ -76,23 +77,27 @@ pub async fn gpu_main() {
 
     let quad_mesh = make_rect(quad_texture_ratio, &wgpu_wrapper.device);
 
+    /*
     // Render Loop
     glfw_wrapper.enable_events_polling();
     while !glfw_wrapper.should_close() {
         glfw_wrapper.dispatch_events(&instance, &wgpu_wrapper.device, &glfw_render_context);
 
-        render_full(
-            &wgpu_wrapper,
-            &render_pipeline,
-            &quad_material,
-            quad_mesh,
-            texture_full_width,
-            texture_full_height,
-        )
-        .await;
+        // Render here...
 
         break;
     }
+    */
+
+    render_full(
+        &wgpu_wrapper,
+        &render_pipeline,
+        &quad_material,
+        quad_mesh,
+        texture_full_width,
+        texture_full_height,
+    )
+    .await;
 
     resize_and_save_image_truncated(
         Path::new(RESULT_GPU_FILENAME),
@@ -220,9 +225,9 @@ pub fn render_start(
         mip_level_count: 1,
         sample_count: 1,
         dimension: TextureDimension::D2,
-        format: TextureFormat::Rgba8UnormSrgb,
+        format: USED_PIXEL_FORMAT,
         usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
-        view_formats: &[TextureFormat::Rgba8UnormSrgb],
+        view_formats: &[USED_PIXEL_FORMAT],
     });
     let texture_view = texture.create_view(&TextureViewDescriptor::default());
     let output_buffer_desc = BufferDescriptor {

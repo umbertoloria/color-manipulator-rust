@@ -1,4 +1,5 @@
 use crate::gpu::shaders::read_file::make_safe_filepath;
+use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use std::fs::read_to_string;
 use wgpu::{
     BindGroupLayout, BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState,
@@ -22,7 +23,7 @@ impl<'a> PipelineBuilder<'a> {
             shader_filename: "dummy".into(),
             vertex_entry: "dummy".into(),
             fragment_entry: "dummy".into(),
-            pixel_format: TextureFormat::Rgba8UnormSrgb, // Default.
+            pixel_format: USED_PIXEL_FORMAT, // Default.
             vertex_buffer_layouts: Vec::new(),
             bind_group_layouts: Vec::new(),
             device,

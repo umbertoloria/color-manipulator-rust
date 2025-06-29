@@ -4,7 +4,10 @@ use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
-use image::{ImageBuffer, Rgba};
+use image::imageops::FilterType;
+use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
+use std::error::Error;
+use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
@@ -13,11 +16,6 @@ use wgpu::{
     TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
     TextureDimension, TextureFormat, TextureUsages, TextureView,
 };
-
-pub enum RenderResult {
-    GoNextTick,
-    StopRendering,
-}
 
 pub const U32_SIZE: u32 = size_of::<u32>() as u32;
 pub fn render_start(
@@ -70,12 +68,14 @@ pub fn render_start(
     )
 }
 
+const RESULT_GPU_FILENAME: &str = "result.png";
+const RESULT_FINAL_FILENAME: &str = "result.png";
 pub async fn render_finish(
     device: &Device,
     output_buffer: &Buffer,
     full_width: u32,
     full_height: u32,
-) -> RenderResult {
+) {
     // Save Texture on an Image.
     {
         let buffer_slice = output_buffer.slice(..);
@@ -92,17 +92,14 @@ pub async fn render_finish(
         let data = buffer_slice.get_mapped_range();
 
         let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
-        buffer.save("image.png").unwrap();
+        buffer.save(RESULT_GPU_FILENAME).unwrap();
     }
     output_buffer.unmap();
 
     // Draw on a Window.
     /*
     drawable.present();
-    RenderResult::GoNextTick
     */
-
-    RenderResult::StopRendering
 }
 
 pub async fn gpu_main() {
@@ -146,6 +143,7 @@ pub async fn gpu_main() {
         "Quad Material",
         &material_bind_group_layout,
     );
+    let image_real_ratio = quad_material.width as f32 / quad_material.height as f32;
     let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     let texture_full_width: u32 =
         quad_material.width + (block_size - (quad_material.width % block_size)) % block_size;
@@ -235,7 +233,7 @@ pub async fn gpu_main() {
         );
         wgpu_wrapper.queue.submit(Some(command_encoder.finish()));
 
-        let render_result = render_finish(
+        render_finish(
             &wgpu_wrapper.device,
             &output_buffer,
             texture_full_width,
@@ -243,11 +241,45 @@ pub async fn gpu_main() {
         )
         .await;
 
-        match render_result {
-            RenderResult::GoNextTick => {}
-            RenderResult::StopRendering => {
-                break;
-            }
-        };
+        break;
     }
+
+    resize_and_save_image_truncated(
+        Path::new(RESULT_GPU_FILENAME),
+        Path::new(RESULT_FINAL_FILENAME),
+        (texture_full_width as f32 / image_real_ratio) as u32,
+        quad_material.width,
+        quad_material.height,
+    )
+    .unwrap();
+}
+
+fn resize_and_save_image_truncated(
+    input_path: &Path,
+    output_path: &Path,
+    extended_real_height: u32,
+    new_width: u32,
+    new_height: u32,
+) -> Result<(), Box<dyn Error>> {
+    let img = ImageReader::open(input_path)?.decode()?;
+
+    let original_width = img.width();
+    let original_height = img.height();
+
+    if new_width > original_width || new_height > original_height {
+        return Err(
+            format!(
+                "New dimensions ({new_width}x{new_height}) cannot be larger than original ({original_width}x{original_height}) for truncation."
+            )
+                .into(),
+        );
+    }
+
+    let crop_img = img.crop_imm(0, 0, original_width, extended_real_height);
+
+    let resized_img = crop_img.resize(new_width, new_height, FilterType::Gaussian);
+
+    let format = ImageFormat::from_path(output_path).unwrap_or(ImageFormat::Png);
+    resized_img.save_with_format(output_path, format)?;
+    Ok(())
 }

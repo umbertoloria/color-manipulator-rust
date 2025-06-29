@@ -82,24 +82,25 @@ pub fn make_triangle(device: &Device) -> Buffer {
 
 pub fn make_rect(ratio: f32, device: &Device) -> Mesh {
     let inv_ratio = 1.0 / ratio;
+    let offset_y = 1.0 - inv_ratio; // Vertically aligned on top.
     let vertices = [
         Vertex {
-            position: Vec3::new(-1.0, -inv_ratio, 0.0),
+            position: Vec3::new(-1.0, -inv_ratio + offset_y, 0.0),
             color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(0.0, 1.0),
         },
         Vertex {
-            position: Vec3::new(1.0, -inv_ratio, 0.0),
+            position: Vec3::new(1.0, -inv_ratio + offset_y, 0.0),
             color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(1.0, 1.0),
         },
         Vertex {
-            position: Vec3::new(1.0, inv_ratio, 0.0),
+            position: Vec3::new(1.0, inv_ratio + offset_y, 0.0),
             color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(1.0, 0.0),
         },
         Vertex {
-            position: Vec3::new(-1.0, inv_ratio, 0.0),
+            position: Vec3::new(-1.0, inv_ratio + offset_y, 0.0),
             color: Vec3::new(1.0, 1.0, 1.0), // White.
             tex_coord: Vec2::new(0.0, 0.0),
         },

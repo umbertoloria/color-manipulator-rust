@@ -1,6 +1,7 @@
-use glfw::{fail_on_errors, Action, ClientApiHint, Glfw, GlfwReceiver, Key, PRenderContext, PWindow, WindowEvent, WindowHint};
-use wgpu::SurfaceError;
-use crate::gpu::gpu_main::{RenderResult, State};
+use glfw::{
+    fail_on_errors, ClientApiHint, FlushedMessages, Glfw, GlfwReceiver,
+    PRenderContext, PWindow, WindowEvent, WindowHint,
+};
 
 pub struct Window {
     pub glfw: Glfw,
@@ -40,53 +41,23 @@ impl Window {
         self.window.render_context()
     }
 
-    pub async fn render_loop<'a>(&'a mut self, state: &mut State<'a>) {
+    pub fn before_rendering(&mut self) {
         // self.window.set_all_polling(true);
         self.window.set_key_polling(true);
         self.window.set_framebuffer_size_polling(true);
         self.window.set_pos_polling(true);
         // self.window.set_mouse_button_polling(true);
+    }
 
-        while !self.window.should_close() {
-            self.glfw.poll_events();
+    pub fn should_close(&self) -> bool {
+        self.window.should_close()
+    }
+    pub fn set_should_close(&mut self) {
+        self.window.set_should_close(true);
+    }
 
-            for (_, event) in glfw::flush_messages(&self.events) {
-                match event {
-                    WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                        self.window.set_should_close(true)
-                    }
-
-                    WindowEvent::FramebufferSize(width, height) => {
-                        state.update_surface(&self.render_context);
-                        state.resize((width as u32, height as u32));
-                    }
-
-                    WindowEvent::Pos(..) => {
-                        // Workaround for Window Move.
-                        state.update_surface(&self.render_context);
-                        state.resize(state.size);
-                    }
-
-                    _ => {
-                        // println!("{:?}", e);
-                    }
-                }
-            }
-
-            match state.render().await {
-                Ok(render_result) => match render_result {
-                    RenderResult::GoNextTick => {}
-                    RenderResult::StopRendering => {
-                        break;
-                    }
-                },
-                Err(SurfaceError::Lost | SurfaceError::Outdated) => {
-                    // Workaround on Window Resize.
-                    state.update_surface(&self.render_context);
-                    state.resize(state.size);
-                }
-                Err(e) => eprintln!("{:?}", e),
-            };
-        }
+    pub fn poll_and_get_events(&mut self) -> FlushedMessages<'_, (f64, WindowEvent)> {
+        self.glfw.poll_events();
+        glfw::flush_messages(&self.events)
     }
 }

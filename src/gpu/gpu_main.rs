@@ -3,7 +3,7 @@ use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::window::Window;
-use glfw::PRenderContext;
+use glfw::{Action, Key, PRenderContext, WindowEvent};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -319,8 +319,51 @@ impl<'a> State<'a> {
 pub async fn gpu_main() {
     let mut window = Window::new();
     let (width, height) = window.get_framebuffer_size();
-    let initial_render_context = window.get_render_context();
-    let mut state = State::new(width, height, &initial_render_context).await;
+    let render_context = window.get_render_context();
+    let mut state = State::new(width, height, &render_context).await;
 
-    window.render_loop(&mut state).await;
+    window.before_rendering();
+    while !window.should_close() {
+        let mut should_close = false;
+        for (_, event) in window.poll_and_get_events() {
+            match event {
+                WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+                    should_close = true;
+                }
+
+                WindowEvent::FramebufferSize(width, height) => {
+                    state.update_surface(&render_context);
+                    state.resize((width as u32, height as u32));
+                }
+
+                WindowEvent::Pos(..) => {
+                    // Workaround for Window Move.
+                    state.update_surface(&render_context);
+                    state.resize(state.size);
+                }
+
+                _ => {
+                    // println!("{:?}", e);
+                }
+            }
+        }
+        if should_close {
+            window.set_should_close();
+        }
+
+        match state.render().await {
+            Ok(render_result) => match render_result {
+                RenderResult::GoNextTick => {}
+                RenderResult::StopRendering => {
+                    break;
+                }
+            },
+            Err(SurfaceError::Lost | SurfaceError::Outdated) => {
+                // Workaround on Window Resize.
+                state.update_surface(&render_context);
+                state.resize(state.size);
+            }
+            Err(e) => eprintln!("{:?}", e),
+        };
+    }
 }

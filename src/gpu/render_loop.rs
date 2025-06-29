@@ -131,7 +131,10 @@ pub async fn gpu_main() {
         .unwrap();
 
     // State
-    let mut state = State::new(&adapter, win_surface, width, height).await;
+    let state = State::new(&adapter).await;
+
+    // WinState
+    let mut win_state = WinState::new(&adapter, &state.device, win_surface, width, height);
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)
@@ -176,14 +179,14 @@ pub async fn gpu_main() {
                 }
 
                 WindowEvent::FramebufferSize(width, height) => {
-                    state.update_surface(&instance, &render_context);
-                    state.resize((width as u32, height as u32));
+                    win_state.update_surface(&instance, &render_context);
+                    win_state.resize(&state.device, (width as u32, height as u32));
                 }
 
                 WindowEvent::Pos(..) => {
                     // Workaround for Window Move.
-                    state.update_surface(&instance, &render_context);
-                    state.resize(state.win_state.curr_size);
+                    win_state.update_surface(&instance, &render_context);
+                    win_state.resize(&state.device, win_state.curr_size);
                 }
 
                 _ => {

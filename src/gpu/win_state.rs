@@ -1,8 +1,7 @@
 use crate::gpu::state::USED_PIXEL_FORMAT;
+use crate::gpu::window::Window;
 use glfw::PRenderContext;
-use wgpu::{
-    Adapter, Device, Instance, Surface, SurfaceConfiguration, TextureUsages,
-};
+use wgpu::{Adapter, Device, Instance, Surface, SurfaceConfiguration, TextureUsages};
 
 pub struct WinState<'a> {
     pub surface: Surface<'a>,
@@ -46,15 +45,6 @@ impl<'a> WinState<'a> {
         }
     }
     pub fn update_surface(&mut self, instance: &Instance, render_context: &'a PRenderContext) {
-        self.surface = Self::create_wgpu_surface(&instance, render_context);
-    }
-
-    fn create_wgpu_surface(instance: &Instance, render_context: &'a PRenderContext) -> Surface<'a> {
-        instance.create_surface(render_context).unwrap()
-    }
-
-    pub fn init_win_state(instance: &Instance, render_context: &'a PRenderContext) -> Surface<'a> {
-        let surface = WinState::create_wgpu_surface(&instance, render_context);
-        surface
+        self.surface = Window::create_glfw_surface(&instance, render_context);
     }
 }

@@ -11,10 +11,9 @@ use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
     Extent3d, IndexFormat, Instance, InstanceDescriptor, LoadOp, MapMode, Operations, Origin3d,
-    PollType, PowerPreference, RenderPassColorAttachment, RenderPassDescriptor,
-    RequestAdapterOptionsBase, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
-    TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor, TextureDimension,
-    TextureFormat, TextureUsages, TextureView,
+    PollType, RenderPassColorAttachment, RenderPassDescriptor, StoreOp, TexelCopyBufferInfo,
+    TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
+    TextureDimension, TextureFormat, TextureUsages, TextureView,
 };
 
 pub enum RenderResult {
@@ -109,32 +108,27 @@ pub async fn render_finish(
 }
 
 pub async fn gpu_main() {
-    // Window
-    let mut window = Window::new();
-    let (width, height) = window.get_framebuffer_size();
-    let render_context = window.get_render_context();
-
     // WGPU
     let instance = Instance::new(&InstanceDescriptor::default());
 
     // Window
-    let win_surface = WinState::init_win_state(&instance, &render_context);
+    const WIN_WIDTH: u32 = 900;
+    const WIN_HEIGHT: u32 = 900;
+    let mut window = Window::new(WIN_WIDTH, WIN_HEIGHT);
+    let render_context = window.get_render_context();
+    let win_surface = Window::create_glfw_surface(&instance, &render_context);
 
-    // WGPU
-    let adapter = instance
-        .request_adapter(&RequestAdapterOptionsBase {
-            power_preference: PowerPreference::default(),
-            compatible_surface: Some(&win_surface),
-            force_fallback_adapter: false,
-        })
-        .await
-        .unwrap();
-
-    // State
-    let state = State::new(&adapter).await;
+    // WGPU and State
+    let state = State::new(&instance, Some(&win_surface)).await;
 
     // WinState
-    let mut win_state = WinState::new(&adapter, &state.device, win_surface, width, height);
+    let mut win_state = WinState::new(
+        &state.adapter,
+        &state.device,
+        win_surface,
+        window.width,
+        window.height,
+    );
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)

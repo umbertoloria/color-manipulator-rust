@@ -1,4 +1,4 @@
-use crate::gpu::window::gpu_main;
+use crate::gpu::gpu_main::gpu_main;
 
 mod coord;
 mod folding;

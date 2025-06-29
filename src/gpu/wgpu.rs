@@ -3,7 +3,7 @@ use wgpu::{
     Queue, RequestAdapterOptionsBase, Surface, TextureFormat,
 };
 
-pub const USED_PIXEL_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
+pub const USED_PIXEL_FORMAT: TextureFormat = TextureFormat::Rgba8Unorm;
 
 pub struct WGPUWrapper {
     pub adapter: Adapter,

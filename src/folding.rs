@@ -5,6 +5,9 @@ pub fn get_path_in(name: &str) -> String {
 pub fn get_path_out(name: &str) -> String {
     format!("out/{}", name)
 }
+pub fn get_path_out_gpu(name: &str) -> String {
+    format!("out_gpu/{}", name)
+}
 
 /*
 fn get_file_paths(dir: &str) -> Vec<PathBuf> {

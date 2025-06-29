@@ -6,6 +6,7 @@ use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
 use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
 use std::error::Error;
+use std::fs::remove_file;
 use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -16,12 +17,11 @@ use wgpu::{
     TextureDimension, TextureUsages, TextureView,
 };
 
-pub const GPU_INPUT_FILENAME: &str = "input/20230301_224920.jpg";
-const GPU_MIDDLE_FILENAME: &str = "result_middle.png";
-pub const GPU_FINAL_FILENAME: &str = "result.png";
-pub const GPU_DIFF_FILENAME: &str = "result_diff.png";
-
-pub async fn gpu_main() {
+pub async fn gpu_main(
+    //
+    input_filename: &str,
+    output_filename: &str,
+) {
     // WGPU
     let instance = WGPUWrapper::init_instance();
     let wgpu_wrapper = WGPUWrapper::new(&instance, None).await;
@@ -58,7 +58,7 @@ pub async fn gpu_main() {
         .add_bind_group_layout(&material_bind_group_layout)
         .build("Render Pipeline");
     let quad_material = Material::new(
-        GPU_INPUT_FILENAME,
+        input_filename,
         &wgpu_wrapper.device,
         &wgpu_wrapper.queue,
         "Quad Material",
@@ -101,6 +101,7 @@ pub async fn gpu_main() {
     }
     */
 
+    let middle_filename = &format!("{}_middle.png", output_filename);
     render_full(
         &wgpu_wrapper,
         &render_pipeline,
@@ -108,12 +109,13 @@ pub async fn gpu_main() {
         quad_mesh,
         safe_filesize,
         safe_filesize,
+        middle_filename,
     )
     .await;
 
     resize_and_save_image_truncated(
-        Path::new(GPU_MIDDLE_FILENAME),
-        Path::new(GPU_FINAL_FILENAME),
+        Path::new(middle_filename),
+        Path::new(output_filename),
         quad_material.width,
         quad_material.height,
     )
@@ -127,6 +129,7 @@ async fn render_full(
     quad_mesh: Mesh,
     texture_full_width: u32,
     texture_full_height: u32,
+    middle_filename: &str,
 ) {
     // Render
     let (
@@ -203,6 +206,7 @@ async fn render_full(
         &output_buffer,
         texture_full_width,
         texture_full_height,
+        middle_filename,
     )
     .await;
 }
@@ -261,6 +265,7 @@ pub async fn render_finish(
     output_buffer: &Buffer,
     full_width: u32,
     full_height: u32,
+    middle_filename: &str,
 ) {
     // Save Texture on an Image.
     {
@@ -278,7 +283,7 @@ pub async fn render_finish(
         let data = buffer_slice.get_mapped_range();
 
         let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
-        buffer.save(GPU_MIDDLE_FILENAME).unwrap();
+        buffer.save(middle_filename).unwrap();
     }
     output_buffer.unmap();
 
@@ -294,25 +299,14 @@ fn resize_and_save_image_truncated(
     crop_x_right: u32,
     crop_y_bottom: u32,
 ) -> Result<(), Box<dyn Error>> {
-    let img = ImageReader::open(input_path)?.decode()?;
-
-    /*let original_width = img.width();
-    let original_height = img.height();
-    if new_width > original_width || new_height > original_height {
-        return Err(
-            format!(
-                "New dimensions ({new_width}x{new_height}) cannot be larger than original ({original_width}x{original_height}) for truncation."
-            )
-                .into(),
-        );
+    {
+        let img = ImageReader::open(input_path)?.decode()?;
+        let crop_img = img.crop_imm(0, 0, crop_x_right, crop_y_bottom);
+        let png_format = ImageFormat::Png;
+        crop_img.save_with_format(output_path, png_format)?;
     }
 
-    let crop_img = img.crop_imm(0, 0, original_width, extended_real_height);
-    let resized_img = crop_img.resize(new_width, new_height, FilterType::Gaussian);*/
+    remove_file(Path::new(input_path))?;
 
-    let crop_img = img.crop_imm(0, 0, crop_x_right, crop_y_bottom);
-
-    let format = ImageFormat::from_path(output_path).unwrap_or(ImageFormat::Png);
-    crop_img.save_with_format(output_path, format)?;
     Ok(())
 }

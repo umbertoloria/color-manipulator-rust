@@ -108,6 +108,7 @@ pub async fn render_finish(
 pub async fn gpu_main() {
     // WGPU
     let instance = WGPUWrapper::init_instance();
+    let wgpu_wrapper = WGPUWrapper::new(&instance, None).await;
 
     // Glfw
     const WIN_WIDTH: u32 = 900;
@@ -120,11 +121,6 @@ pub async fn gpu_main() {
     ) = GlfwWrapper::init_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE);
     let glfw_render_context = glfw_window.render_context();
     let window_surface = GlfwWrapper::create_glfw_surface(&instance, &glfw_render_context);
-
-    // WGPU Wrapper
-    let wgpu_wrapper = WGPUWrapper::new(&instance, Some(&window_surface)).await;
-
-    // Glfw Wrapper
     let window_state = WindowState::new(
         &wgpu_wrapper.adapter,
         &wgpu_wrapper.device,

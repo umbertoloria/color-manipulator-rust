@@ -1,11 +1,7 @@
-use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
-use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
-use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
-use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::PRenderContext;
 use wgpu::{
-    Backends, Device, DeviceDescriptor, Instance, InstanceDescriptor, PowerPreference, Queue,
-    RenderPipeline, RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat,
+    Backends, Device, DeviceDescriptor, Instance, InstanceDescriptor, PowerPreference, Queue
+    , RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat,
     TextureUsages,
 };
 
@@ -14,13 +10,8 @@ pub struct State<'a> {
     surface: Surface<'a>,
     pub device: Device, // Abstract GPU
     pub queue: Queue,   // For submitting works
-    config: SurfaceConfiguration,
+    pub config: SurfaceConfiguration,
     pub size: (u32, u32),
-    pub render_pipeline: RenderPipeline,
-    pub quad_mesh: Mesh,
-    pub quad_material: Material,
-    pub texture_full_width: u32,
-    pub texture_full_height: u32,
 }
 impl<'a> State<'a> {
     pub async fn new(
@@ -86,54 +77,6 @@ impl<'a> State<'a> {
         };
         surface.configure(&device, &config);
 
-        let material_bind_group_layout = {
-            let mut bind_group_layout_builder = BindGroupLayoutBuilder::new(&device);
-            bind_group_layout_builder.add_material();
-            bind_group_layout_builder.build("Material Bind Group Layout")
-        };
-
-        let render_pipeline = {
-            let mut pipeline_builder = PipelineBuilder::new(&device);
-            pipeline_builder.set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main");
-            pipeline_builder.set_pixel_format(config.format);
-            pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
-            pipeline_builder.add_bind_group_layout(&material_bind_group_layout);
-            pipeline_builder.build("Render Pipeline")
-        };
-
-        let quad_material = Material::new(
-            "input/20230301_224920.jpg",
-            &device,
-            &queue,
-            "Quad Material",
-            &material_bind_group_layout,
-        );
-
-        let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-        let texture_full_width: u32 =
-            quad_material.width + (block_size - (quad_material.width % block_size)) % block_size;
-        let texture_full_height: u32 =
-            quad_material.height + (block_size - (quad_material.height % block_size)) % block_size;
-        // Using quad texture.
-        let texture_full_height: u32 = texture_full_width;
-
-        let quad_texture_ratio =
-            calculate_ratio(quad_material.width as f32, quad_material.height as f32)
-                / calculate_ratio(texture_full_width as f32, texture_full_height as f32);
-
-        let quad_mesh = make_rect(quad_texture_ratio, &device);
-
-        /*
-        let triangle_mesh = make_triangle(&device);
-        let triangle_material = Material::new(
-            "input/20240714_1958.png",
-            &device,
-            &queue,
-            "Triangle Material",
-            &material_bind_group_layout,
-        );
-        */
-
         Self {
             instance,
             surface,
@@ -141,13 +84,6 @@ impl<'a> State<'a> {
             queue,
             config,
             size: (framebuffer_width, framebuffer_height),
-            render_pipeline,
-            quad_mesh,
-            quad_material,
-            texture_full_width,
-            texture_full_height,
-            // triangle_mesh,
-            // triangle_material,
         }
     }
 

@@ -1,3 +1,7 @@
+use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
+use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
+use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
+use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::state::State;
 use crate::gpu::window::Window;
 use glfw::{flush_messages, Action, Key, WindowEvent};
@@ -104,6 +108,43 @@ pub async fn gpu_main() {
     let render_context = window.get_render_context();
     let mut state = State::new(width, height, &render_context).await;
 
+    let material_bind_group_layout = {
+        let mut bind_group_layout_builder = BindGroupLayoutBuilder::new(&state.device);
+        bind_group_layout_builder.add_material();
+        bind_group_layout_builder.build("Material Bind Group Layout")
+    };
+
+    let render_pipeline = {
+        let mut pipeline_builder = PipelineBuilder::new(&state.device);
+        pipeline_builder.set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main");
+        pipeline_builder.set_pixel_format(state.config.format);
+        pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
+        pipeline_builder.add_bind_group_layout(&material_bind_group_layout);
+        pipeline_builder.build("Render Pipeline")
+    };
+
+    let quad_material = Material::new(
+        "input/20230301_224920.jpg",
+        &state.device,
+        &state.queue,
+        "Quad Material",
+        &material_bind_group_layout,
+    );
+
+    let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    let texture_full_width: u32 =
+        quad_material.width + (block_size - (quad_material.width % block_size)) % block_size;
+    let texture_full_height: u32 =
+        quad_material.height + (block_size - (quad_material.height % block_size)) % block_size;
+    // Using quad texture.
+    let texture_full_height: u32 = texture_full_width;
+
+    let quad_texture_ratio =
+        calculate_ratio(quad_material.width as f32, quad_material.height as f32)
+            / calculate_ratio(texture_full_width as f32, texture_full_height as f32);
+
+    let quad_mesh = make_rect(quad_texture_ratio, &state.device);
+
     // Render Loop
     window.prepare_events();
     while !window.window.should_close() {
@@ -138,11 +179,7 @@ pub async fn gpu_main() {
             texture,
             texture_view,
             output_buffer,
-        ) = render_start(
-            &state.device,
-            state.texture_full_width,
-            state.texture_full_height,
-        );
+        ) = render_start(&state.device, texture_full_width, texture_full_height);
 
         // Command Encoder
         let c_e_descriptor = CommandEncoderDescriptor {
@@ -170,19 +207,12 @@ pub async fn gpu_main() {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            render_pass.set_pipeline(&state.render_pipeline);
+            render_pass.set_pipeline(&render_pipeline);
 
-            render_pass.set_bind_group(0, &state.quad_material.bind_group, &[]);
-            render_pass.set_vertex_buffer(0, state.quad_mesh.vertex_buffer.slice(..));
-            render_pass
-                .set_index_buffer(state.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
-            render_pass.draw_indexed(0..state.quad_mesh.index_buffer_len, 0, 0..1);
-
-            /*
-            render_pass.set_bind_group(0, &state.triangle_material.bind_group, &[]);
-            render_pass.set_vertex_buffer(0, state.triangle_mesh.slice(..));
-            render_pass.draw(0..3, 0..1);
-            */
+            render_pass.set_bind_group(0, &quad_material.bind_group, &[]);
+            render_pass.set_vertex_buffer(0, quad_mesh.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
+            render_pass.draw_indexed(0..quad_mesh.index_buffer_len, 0, 0..1);
         }
 
         // Render on a Texture.
@@ -197,13 +227,13 @@ pub async fn gpu_main() {
                 buffer: &output_buffer,
                 layout: TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(U32_SIZE * state.texture_full_width),
-                    rows_per_image: Some(state.texture_full_height),
+                    bytes_per_row: Some(U32_SIZE * texture_full_width),
+                    rows_per_image: Some(texture_full_height),
                 },
             },
             Extent3d {
-                width: state.texture_full_width,
-                height: state.texture_full_height,
+                width: texture_full_width,
+                height: texture_full_height,
                 depth_or_array_layers: 1,
             },
         );
@@ -212,8 +242,8 @@ pub async fn gpu_main() {
         let render_result = render_finish(
             &state.device,
             &output_buffer,
-            state.texture_full_width,
-            state.texture_full_height,
+            texture_full_width,
+            texture_full_height,
         )
         .await;
 

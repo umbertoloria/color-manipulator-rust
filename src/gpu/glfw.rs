@@ -2,15 +2,34 @@ use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use glfw::{flush_messages, Action, GlfwReceiver, Key, PRenderContext, PWindow, WindowEvent};
 use wgpu::{Adapter, Device, Instance, Surface, SurfaceConfiguration, TextureUsages};
 
-pub struct GlfwWrapper {
+pub struct GlfwWrapper<'a> {
+    pub window_state: WindowState<'a>,
     pub glfw_events: GlfwReceiver<(f64, WindowEvent)>,
 }
-impl GlfwWrapper {
-    pub fn new(glfw_events: GlfwReceiver<(f64, WindowEvent)>) -> Self {
+impl<'a> GlfwWrapper<'a> {
+    pub fn new(
+        window_state: WindowState<'a>,
+        glfw_events: GlfwReceiver<(f64, WindowEvent)>,
+    ) -> Self {
         Self {
-            //
+            window_state,
             glfw_events,
         }
+    }
+    pub fn enable_events_polling(&mut self) {
+        self.window_state.enable_events_polling();
+    }
+    pub fn should_close(&self) -> bool {
+        self.window_state.should_close()
+    }
+    pub fn dispatch_events(
+        &mut self,
+        instance: &Instance,
+        device: &Device,
+        glfw_render_context: &'a PRenderContext,
+    ) {
+        self.window_state
+            .dispatch_events(&self.glfw_events, instance, device, glfw_render_context);
     }
 }
 
@@ -67,22 +86,22 @@ impl<'a> WindowState<'a> {
         self.surface = Self::create_glfw_surface(&instance, glfw_render_context);
     }
     pub fn enable_events_polling(&mut self) {
-        // self.window.set_all_polling(true);
+        // self.glfw_window.set_all_polling(true);
         self.glfw_window.set_key_polling(true);
         self.glfw_window.set_framebuffer_size_polling(true);
         self.glfw_window.set_pos_polling(true);
-        // self.window.set_mouse_button_polling(true);
+        // self.glfw_window.set_mouse_button_polling(true);
     }
     pub fn dispatch_events(
         &mut self,
-        glfw_wrapper: &GlfwWrapper,
+        glfw_events: &GlfwReceiver<(f64, WindowEvent)>,
         instance: &Instance,
         device: &Device,
         glfw_render_context: &'a PRenderContext,
     ) {
         // Dispatch Events
         self.glfw_window.glfw.poll_events();
-        let messages = flush_messages(&glfw_wrapper.glfw_events);
+        let messages = flush_messages(glfw_events);
         for (_, event) in messages {
             match event {
                 WindowEvent::Key(Key::Escape, _, Action::Press, _) => {

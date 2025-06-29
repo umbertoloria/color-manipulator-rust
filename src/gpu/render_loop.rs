@@ -125,14 +125,14 @@ pub async fn gpu_main() {
     // WGPU Wrapper
     let wgpu_wrapper = WGPUWrapper::new(&instance, Some(&window_surface)).await;
 
-    // Window State
-    let glfw_wrapper = GlfwWrapper::new(glfw_events);
-    let mut window_state = WindowState::new(
+    // Glfw Wrapper
+    let window_state = WindowState::new(
         &wgpu_wrapper.adapter,
         &wgpu_wrapper.device,
         glfw_window,
         window_surface,
     );
+    let mut glfw_wrapper = GlfwWrapper::new(window_state, glfw_events);
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&wgpu_wrapper.device)
@@ -166,14 +166,9 @@ pub async fn gpu_main() {
     let quad_mesh = make_rect(quad_texture_ratio, &wgpu_wrapper.device);
 
     // Render Loop
-    window_state.enable_events_polling();
-    while !window_state.should_close() {
-        window_state.dispatch_events(
-            &glfw_wrapper,
-            &instance,
-            &wgpu_wrapper.device,
-            &glfw_render_context,
-        );
+    glfw_wrapper.enable_events_polling();
+    while !glfw_wrapper.should_close() {
+        glfw_wrapper.dispatch_events(&instance, &wgpu_wrapper.device, &glfw_render_context);
 
         // Render
         let (

@@ -1,10 +1,9 @@
+use crate::gpu::glfw::WindowState;
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
-use crate::gpu::state::{State, USED_PIXEL_FORMAT};
-use crate::gpu::win_state::WinState;
-use crate::gpu::window::Window;
+use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
 use glfw::{fail_on_errors, ClientApiHint, WindowHint};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
@@ -117,23 +116,28 @@ pub async fn gpu_main() {
     const WIN_TITLE: &str = "Window title";
     let mut glfw = glfw::init(fail_on_errors!()).unwrap();
     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-    let (mut window, events) = glfw
+    let (mut glfw_window, glfw_events) = glfw
         .create_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE, glfw::WindowMode::Windowed)
         .unwrap();
-    let render_context = window.render_context();
-    let window_surface = Window::create_glfw_surface(&instance, &render_context);
+    let glfw_render_context = glfw_window.render_context();
+    let window_surface = WindowState::create_glfw_surface(&instance, &glfw_render_context);
 
-    // WGPU and State
-    let state = State::new(&instance, Some(&window_surface)).await;
+    // WGPU Wrapper
+    let wgpu_wrapper = WGPUWrapper::new(&instance, Some(&window_surface)).await;
 
-    // WinState
-    let mut win_state = WinState::new(&state.adapter, &state.device, window, window_surface);
+    // Window State
+    let mut window_state = WindowState::new(
+        &wgpu_wrapper.adapter,
+        &wgpu_wrapper.device,
+        glfw_window,
+        window_surface,
+    );
 
     // Setup
-    let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)
+    let material_bind_group_layout = BindGroupLayoutBuilder::new(&wgpu_wrapper.device)
         .add_material()
         .build("Material Bind Group Layout");
-    let render_pipeline = PipelineBuilder::new(&state.device)
+    let render_pipeline = PipelineBuilder::new(&wgpu_wrapper.device)
         .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
         .set_pixel_format(USED_PIXEL_FORMAT)
         .add_vertex_buffer_layout(Vertex::get_layout())
@@ -141,8 +145,8 @@ pub async fn gpu_main() {
         .build("Render Pipeline");
     let quad_material = Material::new(
         "input/20230301_224920.jpg",
-        &state.device,
-        &state.queue,
+        &wgpu_wrapper.device,
+        &wgpu_wrapper.queue,
         "Quad Material",
         &material_bind_group_layout,
     );
@@ -158,12 +162,17 @@ pub async fn gpu_main() {
         calculate_ratio(quad_material.width as f32, quad_material.height as f32)
             / calculate_ratio(texture_full_width as f32, texture_full_height as f32);
 
-    let quad_mesh = make_rect(quad_texture_ratio, &state.device);
+    let quad_mesh = make_rect(quad_texture_ratio, &wgpu_wrapper.device);
 
     // Render Loop
-    win_state.enable_events_polling();
-    while !win_state.should_close() {
-        win_state.dispatch_events(&events, &instance, &state.device, &render_context);
+    window_state.enable_events_polling();
+    while !window_state.should_close() {
+        window_state.dispatch_events(
+            &glfw_events,
+            &instance,
+            &wgpu_wrapper.device,
+            &glfw_render_context,
+        );
 
         // Render
         let (
@@ -171,13 +180,17 @@ pub async fn gpu_main() {
             texture,
             texture_view,
             output_buffer,
-        ) = render_start(&state.device, texture_full_width, texture_full_height);
+        ) = render_start(
+            &wgpu_wrapper.device,
+            texture_full_width,
+            texture_full_height,
+        );
 
         // Command Encoder
         let c_e_descriptor = CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         };
-        let mut command_encoder = state.device.create_command_encoder(&c_e_descriptor);
+        let mut command_encoder = wgpu_wrapper.device.create_command_encoder(&c_e_descriptor);
         {
             let render_pass_color_attachment = RenderPassColorAttachment {
                 view: &texture_view,
@@ -229,10 +242,10 @@ pub async fn gpu_main() {
                 depth_or_array_layers: 1,
             },
         );
-        state.queue.submit(Some(command_encoder.finish()));
+        wgpu_wrapper.queue.submit(Some(command_encoder.finish()));
 
         let render_result = render_finish(
-            &state.device,
+            &wgpu_wrapper.device,
             &output_buffer,
             texture_full_width,
             texture_full_height,

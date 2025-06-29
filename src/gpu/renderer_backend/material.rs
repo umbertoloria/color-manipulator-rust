@@ -1,5 +1,5 @@
-use crate::gpu::make_safe_filepath;
 use crate::gpu::renderer_backend::bind_group::BindGroupBuilder;
+use crate::gpu::shaders::read_file::make_safe_filepath;
 use image::GenericImageView;
 use std::fs::read;
 use wgpu::wgt::TextureViewDescriptor;

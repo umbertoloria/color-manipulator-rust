@@ -5,12 +5,12 @@ use wgpu::{
 
 pub const USED_PIXEL_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
 
-pub struct State {
+pub struct WGPUWrapper {
     pub adapter: Adapter,
     pub device: Device,
     pub queue: Queue,
 }
-impl State {
+impl WGPUWrapper {
     pub async fn new(instance: &Instance, compatible_surface: Option<&Surface<'_>>) -> Self {
         let adapter = instance
             .request_adapter(&RequestAdapterOptionsBase {
@@ -20,12 +20,14 @@ impl State {
             })
             .await
             .unwrap();
+
         let device_descriptor = DeviceDescriptor {
             label: Some("Device"),
             required_features: Features::empty(),
             ..Default::default()
         };
         let (device, queue) = adapter.request_device(&device_descriptor).await.unwrap();
+
         Self {
             adapter,
             device,

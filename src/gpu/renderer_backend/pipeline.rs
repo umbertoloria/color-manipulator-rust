@@ -1,4 +1,4 @@
-use crate::gpu::make_safe_filepath;
+use crate::gpu::shaders::read_file::make_safe_filepath;
 use std::fs::read_to_string;
 use wgpu::{
     BindGroupLayout, BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState,

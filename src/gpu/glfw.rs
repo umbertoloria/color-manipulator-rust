@@ -1,24 +1,23 @@
-use crate::gpu::state::USED_PIXEL_FORMAT;
-use crate::gpu::window::Window;
+use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use glfw::{flush_messages, Action, GlfwReceiver, Key, PRenderContext, PWindow, WindowEvent};
 use wgpu::{Adapter, Device, Instance, Surface, SurfaceConfiguration, TextureUsages};
 
-pub struct WinState<'a> {
-    pub window: PWindow,
-    // pub events: GlfwReceiver<(f64, WindowEvent)>,
+pub struct WindowState<'a> {
+    pub glfw_window: PWindow,
+    // pub glfw_events: GlfwReceiver<(f64, WindowEvent)>,
     pub surface: Surface<'a>,
     pub surface_config: SurfaceConfiguration,
     pub curr_size: (u32, u32),
 }
-impl<'a> WinState<'a> {
+impl<'a> WindowState<'a> {
     pub fn new(
         adapter: &Adapter,
         device: &Device,
-        window: PWindow,
-        // events: GlfwReceiver<(f64, WindowEvent)>,
+        glfw_window: PWindow,
+        // glfw_events: GlfwReceiver<(f64, WindowEvent)>,
         surface: Surface<'a>,
     ) -> Self {
-        let window_size = window.get_framebuffer_size();
+        let window_size = glfw_window.get_framebuffer_size();
         let width = window_size.0 as u32;
         let height = window_size.1 as u32;
 
@@ -37,14 +36,14 @@ impl<'a> WinState<'a> {
         };
         surface.configure(&device, &surface_config);
         Self {
-            window,
+            glfw_window,
             surface,
             surface_config,
             curr_size: (width, height),
         }
     }
     pub fn should_close(&self) -> bool {
-        self.window.should_close()
+        self.glfw_window.should_close()
     }
     pub fn resize(&mut self, device: &Device, new_size: (u32, u32)) {
         if new_size.0 > 0 && new_size.1 > 0 {
@@ -54,14 +53,14 @@ impl<'a> WinState<'a> {
             self.surface.configure(&device, &self.surface_config);
         }
     }
-    pub fn update_surface(&mut self, instance: &Instance, render_context: &'a PRenderContext) {
-        self.surface = Window::create_glfw_surface(&instance, render_context);
+    pub fn update_surface(&mut self, instance: &Instance, glfw_render_context: &'a PRenderContext) {
+        self.surface = Self::create_glfw_surface(&instance, glfw_render_context);
     }
     pub fn enable_events_polling(&mut self) {
         // self.window.set_all_polling(true);
-        self.window.set_key_polling(true);
-        self.window.set_framebuffer_size_polling(true);
-        self.window.set_pos_polling(true);
+        self.glfw_window.set_key_polling(true);
+        self.glfw_window.set_framebuffer_size_polling(true);
+        self.glfw_window.set_pos_polling(true);
         // self.window.set_mouse_button_polling(true);
     }
     pub fn dispatch_events(
@@ -69,25 +68,25 @@ impl<'a> WinState<'a> {
         events: &GlfwReceiver<(f64, WindowEvent)>,
         instance: &Instance,
         device: &Device,
-        render_context: &'a PRenderContext,
+        glfw_render_context: &'a PRenderContext,
     ) {
         // Dispatch Events
-        self.window.glfw.poll_events();
+        self.glfw_window.glfw.poll_events();
         let messages = flush_messages(&events);
         for (_, event) in messages {
             match event {
                 WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    self.window.set_should_close(true);
+                    self.glfw_window.set_should_close(true);
                 }
 
                 WindowEvent::FramebufferSize(width, height) => {
-                    self.update_surface(&instance, &render_context);
+                    self.update_surface(&instance, &glfw_render_context);
                     self.resize(&device, (width as u32, height as u32));
                 }
 
                 WindowEvent::Pos(..) => {
                     // Workaround for Window Move.
-                    self.update_surface(&instance, &render_context);
+                    self.update_surface(&instance, &glfw_render_context);
                     self.resize(&device, self.curr_size);
                 }
 
@@ -96,5 +95,11 @@ impl<'a> WinState<'a> {
                 }
             }
         }
+    }
+    pub fn create_glfw_surface(
+        instance: &Instance,
+        glfw_render_context: &'a PRenderContext,
+    ) -> Surface<'a> {
+        instance.create_surface(glfw_render_context).unwrap()
     }
 }

@@ -1,19 +1,16 @@
-use crate::gpu::render_loop::RenderResult;
+use crate::gpu::render_loop::{render_start, RenderResult, U32_SIZE};
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::PRenderContext;
 use image::{ImageBuffer, Rgba};
-use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Backends, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor,
-    Device, DeviceDescriptor, Extent3d, IndexFormat, Instance, InstanceDescriptor, LoadOp,
-    Operations, Origin3d, PollType, PowerPreference, Queue, RenderPassColorAttachment,
-    RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase, StoreOp, Surface,
-    SurfaceConfiguration, SurfaceError, TexelCopyBufferInfo, TexelCopyBufferLayout,
-    TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat,
-    TextureUsages,
+    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Extent3d, IndexFormat,
+    Instance, InstanceDescriptor, LoadOp, Operations, Origin3d, PollType, PowerPreference, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
+    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TexelCopyBufferInfo,
+    TexelCopyBufferLayout, TexelCopyTextureInfo, TextureAspect, TextureFormat, TextureUsages,
 };
 
 pub struct State<'a> {
@@ -161,38 +158,11 @@ impl<'a> State<'a> {
     }
 
     pub async fn render(&mut self) -> Result<RenderResult, SurfaceError> {
-        /*
-        // Texture View: render on Window.
-        let drawable = self.surface.get_current_texture()?;
-        let texture_view = drawable
-            .texture
-            .create_view(&TextureViewDescriptor::default());
-        */
-
-        // Texture View: render on Image.
-        let texture = self.device.create_texture(&TextureDescriptor {
-            label: Some("Output texture"),
-            size: Extent3d {
-                width: self.texture_full_width,
-                height: self.texture_full_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8UnormSrgb,
-            usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[TextureFormat::Rgba8UnormSrgb],
-        });
-        let texture_view = texture.create_view(&TextureViewDescriptor::default());
-        let u32_size = size_of::<u32>() as u32;
-        let output_buffer_desc = BufferDescriptor {
-            label: None,
-            size: (u32_size * self.texture_full_width * self.texture_full_height) as BufferAddress,
-            usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        };
-        let output_buffer = self.device.create_buffer(&output_buffer_desc);
+        let (texture, texture_view, output_buffer) = render_start(
+            &self.device,
+            self.texture_full_width,
+            self.texture_full_height,
+        );
 
         // Command Encoder
         let c_e_descriptor = CommandEncoderDescriptor {
@@ -247,7 +217,7 @@ impl<'a> State<'a> {
                 buffer: &output_buffer,
                 layout: TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(u32_size * self.texture_full_width),
+                    bytes_per_row: Some(U32_SIZE * self.texture_full_width),
                     rows_per_image: Some(self.texture_full_height),
                 },
             },

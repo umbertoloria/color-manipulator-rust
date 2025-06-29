@@ -1,7 +1,7 @@
 use crate::gpu::glfw::{GlfwWrapper, WindowState};
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
-use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
 use image::imageops::FilterType;
@@ -12,95 +12,13 @@ use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
     Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
-    RenderPassColorAttachment, RenderPassDescriptor, StoreOp, TexelCopyBufferInfo,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
     TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
     TextureDimension, TextureFormat, TextureUsages, TextureView,
 };
 
-pub const U32_SIZE: u32 = size_of::<u32>() as u32;
-pub fn render_start(
-    device: &Device,
-    full_width: u32,
-    full_height: u32,
-) -> (
-    //
-    Texture,
-    TextureView,
-    Buffer,
-) {
-    /*
-    // Texture View: render on Window.
-    let drawable = surface.get_current_texture().unwrap();
-    let texture_view = drawable
-        .texture
-        .create_view(&TextureViewDescriptor::default());
-    */
-
-    // Texture View: render on Image.
-    let texture = device.create_texture(&TextureDescriptor {
-        label: Some("Output texture"),
-        size: Extent3d {
-            width: full_width,
-            height: full_height,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: TextureDimension::D2,
-        format: TextureFormat::Rgba8UnormSrgb,
-        usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
-        view_formats: &[TextureFormat::Rgba8UnormSrgb],
-    });
-    let texture_view = texture.create_view(&TextureViewDescriptor::default());
-    let output_buffer_desc = BufferDescriptor {
-        label: None,
-        size: (U32_SIZE * full_width * full_height) as BufferAddress,
-        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    };
-    let output_buffer = device.create_buffer(&output_buffer_desc);
-
-    (
-        //
-        texture,
-        texture_view,
-        output_buffer,
-    )
-}
-
 const RESULT_GPU_FILENAME: &str = "result.png";
 const RESULT_FINAL_FILENAME: &str = "result.png";
-pub async fn render_finish(
-    device: &Device,
-    output_buffer: &Buffer,
-    full_width: u32,
-    full_height: u32,
-) {
-    // Save Texture on an Image.
-    {
-        let buffer_slice = output_buffer.slice(..);
-
-        // NOTE: We have to create the mapping THEN device.poll() before await
-        // the future. Otherwise, the application will freeze.
-        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
-        buffer_slice.map_async(MapMode::Read, move |result| {
-            tx.send(result).unwrap();
-        });
-        device.poll(PollType::Wait).unwrap();
-        rx.receive().await.unwrap().unwrap();
-
-        let data = buffer_slice.get_mapped_range();
-
-        let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
-        buffer.save(RESULT_GPU_FILENAME).unwrap();
-    }
-    output_buffer.unmap();
-
-    // Draw on a Window.
-    /*
-    drawable.present();
-    */
-}
 
 pub async fn gpu_main() {
     // WGPU
@@ -163,79 +81,11 @@ pub async fn gpu_main() {
     while !glfw_wrapper.should_close() {
         glfw_wrapper.dispatch_events(&instance, &wgpu_wrapper.device, &glfw_render_context);
 
-        // Render
-        let (
-            //
-            texture,
-            texture_view,
-            output_buffer,
-        ) = render_start(
-            &wgpu_wrapper.device,
-            texture_full_width,
-            texture_full_height,
-        );
-
-        // Command Encoder
-        let c_e_descriptor = CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        };
-        let mut command_encoder = wgpu_wrapper.device.create_command_encoder(&c_e_descriptor);
-        {
-            let render_pass_color_attachment = RenderPassColorAttachment {
-                view: &texture_view,
-                resolve_target: None,
-                ops: Operations {
-                    load: LoadOp::Clear(Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.0,
-                    }),
-                    store: StoreOp::Store,
-                },
-            };
-            let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(render_pass_color_attachment)],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
-            render_pass.set_pipeline(&render_pipeline);
-
-            render_pass.set_bind_group(0, &quad_material.bind_group, &[]);
-            render_pass.set_vertex_buffer(0, quad_mesh.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
-            render_pass.draw_indexed(0..quad_mesh.index_buffer_len, 0, 0..1);
-        }
-
-        // Render on a Texture.
-        command_encoder.copy_texture_to_buffer(
-            TexelCopyTextureInfo {
-                aspect: TextureAspect::All,
-                texture: &texture,
-                mip_level: 0,
-                origin: Origin3d::ZERO,
-            },
-            TexelCopyBufferInfo {
-                buffer: &output_buffer,
-                layout: TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(U32_SIZE * texture_full_width),
-                    rows_per_image: Some(texture_full_height),
-                },
-            },
-            Extent3d {
-                width: texture_full_width,
-                height: texture_full_height,
-                depth_or_array_layers: 1,
-            },
-        );
-        wgpu_wrapper.queue.submit(Some(command_encoder.finish()));
-
-        render_finish(
-            &wgpu_wrapper.device,
-            &output_buffer,
+        render_full(
+            &wgpu_wrapper,
+            &render_pipeline,
+            &quad_material,
+            quad_mesh,
             texture_full_width,
             texture_full_height,
         )
@@ -252,6 +102,174 @@ pub async fn gpu_main() {
         quad_material.height,
     )
     .unwrap();
+}
+
+async fn render_full(
+    wgpu_wrapper: &WGPUWrapper,
+    render_pipeline: &RenderPipeline,
+    quad_material: &Material,
+    quad_mesh: Mesh,
+    texture_full_width: u32,
+    texture_full_height: u32,
+) {
+    // Render
+    let (
+        //
+        texture,
+        texture_view,
+        output_buffer,
+    ) = render_start(
+        &wgpu_wrapper.device,
+        texture_full_width,
+        texture_full_height,
+    );
+
+    // Command Encoder
+    let c_e_descriptor = CommandEncoderDescriptor {
+        label: Some("Render Encoder"),
+    };
+    let mut command_encoder = wgpu_wrapper.device.create_command_encoder(&c_e_descriptor);
+    {
+        let render_pass_color_attachment = RenderPassColorAttachment {
+            view: &texture_view,
+            resolve_target: None,
+            ops: Operations {
+                load: LoadOp::Clear(Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                }),
+                store: StoreOp::Store,
+            },
+        };
+        let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[Some(render_pass_color_attachment)],
+            depth_stencil_attachment: None,
+            occlusion_query_set: None,
+            timestamp_writes: None,
+        });
+        render_pass.set_pipeline(&render_pipeline);
+
+        render_pass.set_bind_group(0, &quad_material.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, quad_mesh.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
+        render_pass.draw_indexed(0..quad_mesh.index_buffer_len, 0, 0..1);
+    }
+
+    // Render on a Texture.
+    command_encoder.copy_texture_to_buffer(
+        TexelCopyTextureInfo {
+            aspect: TextureAspect::All,
+            texture: &texture,
+            mip_level: 0,
+            origin: Origin3d::ZERO,
+        },
+        TexelCopyBufferInfo {
+            buffer: &output_buffer,
+            layout: TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(U32_SIZE * texture_full_width),
+                rows_per_image: Some(texture_full_height),
+            },
+        },
+        Extent3d {
+            width: texture_full_width,
+            height: texture_full_height,
+            depth_or_array_layers: 1,
+        },
+    );
+    wgpu_wrapper.queue.submit(Some(command_encoder.finish()));
+
+    render_finish(
+        &wgpu_wrapper.device,
+        &output_buffer,
+        texture_full_width,
+        texture_full_height,
+    )
+    .await;
+}
+pub const U32_SIZE: u32 = size_of::<u32>() as u32;
+pub fn render_start(
+    device: &Device,
+    full_width: u32,
+    full_height: u32,
+) -> (
+    //
+    Texture,
+    TextureView,
+    Buffer,
+) {
+    /*
+    // Texture View: render on Window.
+    let drawable = surface.get_current_texture().unwrap();
+    let texture_view = drawable
+        .texture
+        .create_view(&TextureViewDescriptor::default());
+    */
+
+    // Texture View: render on Image.
+    let texture = device.create_texture(&TextureDescriptor {
+        label: Some("Output texture"),
+        size: Extent3d {
+            width: full_width,
+            height: full_height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: TextureDimension::D2,
+        format: TextureFormat::Rgba8UnormSrgb,
+        usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[TextureFormat::Rgba8UnormSrgb],
+    });
+    let texture_view = texture.create_view(&TextureViewDescriptor::default());
+    let output_buffer_desc = BufferDescriptor {
+        label: None,
+        size: (U32_SIZE * full_width * full_height) as BufferAddress,
+        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    };
+    let output_buffer = device.create_buffer(&output_buffer_desc);
+
+    (
+        //
+        texture,
+        texture_view,
+        output_buffer,
+    )
+}
+pub async fn render_finish(
+    device: &Device,
+    output_buffer: &Buffer,
+    full_width: u32,
+    full_height: u32,
+) {
+    // Save Texture on an Image.
+    {
+        let buffer_slice = output_buffer.slice(..);
+
+        // NOTE: We have to create the mapping THEN device.poll() before await
+        // the future. Otherwise, the application will freeze.
+        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(MapMode::Read, move |result| {
+            tx.send(result).unwrap();
+        });
+        device.poll(PollType::Wait).unwrap();
+        rx.receive().await.unwrap().unwrap();
+
+        let data = buffer_slice.get_mapped_range();
+
+        let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
+        buffer.save(RESULT_GPU_FILENAME).unwrap();
+    }
+    output_buffer.unmap();
+
+    // Draw on a Window.
+    /*
+    drawable.present();
+    */
 }
 
 fn resize_and_save_image_truncated(

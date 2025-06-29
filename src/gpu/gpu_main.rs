@@ -3,7 +3,7 @@ use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::window::Window;
-use glfw::{Action, Key, PRenderContext, WindowEvent};
+use glfw::{flush_messages, Action, Key, PRenderContext, WindowEvent};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -318,17 +318,20 @@ impl<'a> State<'a> {
 
 pub async fn gpu_main() {
     let mut window = Window::new();
+
     let (width, height) = window.get_framebuffer_size();
     let render_context = window.get_render_context();
     let mut state = State::new(width, height, &render_context).await;
 
-    window.before_rendering();
-    while !window.should_close() {
-        let mut should_close = false;
-        for (_, event) in window.poll_and_get_events() {
+    // Render Loop
+    window.prepare_events();
+    while !window.window.should_close() {
+        // Dispatch Events
+        window.glfw.poll_events();
+        for (_, event) in flush_messages(&window.events) {
             match event {
                 WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    should_close = true;
+                    window.window.set_should_close(true);
                 }
 
                 WindowEvent::FramebufferSize(width, height) => {
@@ -347,10 +350,8 @@ pub async fn gpu_main() {
                 }
             }
         }
-        if should_close {
-            window.set_should_close();
-        }
 
+        // Render
         match state.render().await {
             Ok(render_result) => match render_result {
                 RenderResult::GoNextTick => {}

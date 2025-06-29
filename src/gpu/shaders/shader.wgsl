@@ -24,5 +24,7 @@ fn vs_main(vertex: Vertex) -> VertexPayload {
 
 @fragment
 fn fs_main(in: VertexPayload) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.color.x, in.color.y, in.color.z, 1.0) * textureSample(myTexture, mySampler, in.texCoord);
+    var c = textureSample(myTexture, mySampler, in.texCoord).xyz;
+    var result = c;
+    return vec4<f32>(result, 1.0);
 }

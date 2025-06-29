@@ -16,7 +16,7 @@ fn main() {
     img_20240714_1958();
     */
 
-    // test_img_diffs();
-
     pollster::block_on(gpu_main());
+
+    // test_img_diffs();
 }

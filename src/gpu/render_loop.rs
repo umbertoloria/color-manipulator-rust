@@ -3,16 +3,18 @@ use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::state::{State, USED_PIXEL_FORMAT};
+use crate::gpu::win_state::WinState;
 use crate::gpu::window::Window;
 use glfw::{flush_messages, Action, Key, WindowEvent};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
-    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
-    RenderPassColorAttachment, RenderPassDescriptor, StoreOp, TexelCopyBufferInfo,
-    TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
-    TextureDimension, TextureFormat, TextureUsages, TextureView,
+    Extent3d, IndexFormat, Instance, InstanceDescriptor, LoadOp, MapMode, Operations, Origin3d,
+    PollType, PowerPreference, RenderPassColorAttachment, RenderPassDescriptor,
+    RequestAdapterOptionsBase, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
+    TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor, TextureDimension,
+    TextureFormat, TextureUsages, TextureView,
 };
 
 pub enum RenderResult {
@@ -112,8 +114,24 @@ pub async fn gpu_main() {
     let (width, height) = window.get_framebuffer_size();
     let render_context = window.get_render_context();
 
+    // WGPU
+    let instance = Instance::new(&InstanceDescriptor::default());
+
+    // Window
+    let win_surface = WinState::init_win_state(&instance, &render_context);
+
+    // WGPU
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptionsBase {
+            power_preference: PowerPreference::default(),
+            compatible_surface: Some(&win_surface),
+            force_fallback_adapter: false,
+        })
+        .await
+        .unwrap();
+
     // State
-    let mut state = State::new(width, height, &render_context).await;
+    let mut state = State::new(&adapter, win_surface, width, height).await;
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)
@@ -158,13 +176,13 @@ pub async fn gpu_main() {
                 }
 
                 WindowEvent::FramebufferSize(width, height) => {
-                    state.update_surface(&render_context);
+                    state.update_surface(&instance, &render_context);
                     state.resize((width as u32, height as u32));
                 }
 
                 WindowEvent::Pos(..) => {
                     // Workaround for Window Move.
-                    state.update_surface(&render_context);
+                    state.update_surface(&instance, &render_context);
                     state.resize(state.win_state.curr_size);
                 }
 

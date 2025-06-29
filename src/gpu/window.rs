@@ -3,12 +3,16 @@ use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
+use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, IndexFormat, Instance,
-    InstanceDescriptor, LoadOp, Operations, PowerPreference, Queue, RenderPassColorAttachment,
+    Backends, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor,
+    Device, DeviceDescriptor, Extent3d, IndexFormat, Instance, InstanceDescriptor, LoadOp,
+    Operations, Origin3d, PollType, PowerPreference, Queue, RenderPassColorAttachment,
     RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase, StoreOp, Surface,
-    SurfaceConfiguration, SurfaceError, TextureFormat, TextureUsages,
+    SurfaceConfiguration, SurfaceError, TexelCopyBufferInfo, TexelCopyBufferLayout,
+    TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat,
+    TextureUsages,
 };
 
 struct State<'a> {
@@ -143,12 +147,44 @@ impl<'a> State<'a> {
         }
     }
 
-    fn render(&mut self) -> Result<(), SurfaceError> {
+    async fn render(&mut self) -> Result<(), SurfaceError> {
+        /*
         // Texture View: render on Window.
         let drawable = self.surface.get_current_texture()?;
         let texture_view = drawable
             .texture
             .create_view(&TextureViewDescriptor::default());
+        */
+
+        // Texture View: render on Image.
+        let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+        let texture_full_width: u32 = self.quad_material.width
+            + (block_size - (self.quad_material.width % block_size)) % block_size;
+        let texture_full_height: u32 = self.quad_material.height
+            + (block_size - (self.quad_material.height % block_size)) % block_size;
+        let texture = self.device.create_texture(&TextureDescriptor {
+            label: Some("Output texture"),
+            size: Extent3d {
+                width: texture_full_width,
+                height: texture_full_height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Rgba8UnormSrgb,
+            usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[TextureFormat::Rgba8UnormSrgb],
+        });
+        let texture_view = texture.create_view(&TextureViewDescriptor::default());
+        let u32_size = size_of::<u32>() as u32;
+        let output_buffer_desc = BufferDescriptor {
+            label: None,
+            size: (u32_size * texture_full_width * texture_full_height) as BufferAddress,
+            usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        };
+        let output_buffer = self.device.create_buffer(&output_buffer_desc);
 
         // Command Encoder
         let c_e_descriptor = CommandEncoderDescriptor {
@@ -191,10 +227,56 @@ impl<'a> State<'a> {
             */
         }
 
+        // Render on a Texture.
+        command_encoder.copy_texture_to_buffer(
+            TexelCopyTextureInfo {
+                aspect: TextureAspect::All,
+                texture: &texture,
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+            },
+            TexelCopyBufferInfo {
+                buffer: &output_buffer,
+                layout: TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(u32_size * texture_full_width),
+                    rows_per_image: Some(texture_full_height),
+                },
+            },
+            Extent3d {
+                width: texture_full_width,
+                height: texture_full_height,
+                depth_or_array_layers: 1,
+            },
+        );
         self.queue.submit(Some(command_encoder.finish()));
 
+        // Save Texture on an Image.
+        {
+            let buffer_slice = output_buffer.slice(..);
+
+            // NOTE: We have to create the mapping THEN device.poll() before await
+            // the future. Otherwise, the application will freeze.
+            let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+            buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+                tx.send(result).unwrap();
+            });
+            self.device.poll(PollType::Wait).unwrap();
+            rx.receive().await.unwrap().unwrap();
+
+            let data = buffer_slice.get_mapped_range();
+
+            let buffer =
+                ImageBuffer::<Rgba<u8>, _>::from_raw(texture_full_width, texture_full_height, data)
+                    .unwrap();
+            buffer.save("image.png").unwrap();
+        }
+        output_buffer.unmap();
+
         // Draw on a Window.
+        /*
         drawable.present();
+        */
 
         Ok(())
     }
@@ -264,8 +346,10 @@ pub async fn gpu_main() {
             }
         }
 
-        match state.render() {
-            Ok(_) => {}
+        match state.render().await {
+            Ok(_) => {
+                break;
+            }
             Err(SurfaceError::Lost | SurfaceError::Outdated) => {
                 // Workaround on Window Resize.
                 state.update_surface();

@@ -1,7 +1,8 @@
 use std::env::current_dir;
 
-pub mod renderer_backend;
 pub mod gpu_main;
+pub mod renderer_backend;
+pub mod window;
 
 pub fn make_safe_filepath(filepath_str: &str) -> String {
     let mut filepath = current_dir().unwrap();

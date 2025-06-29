@@ -15,6 +15,11 @@ use wgpu::{
     TextureUsages,
 };
 
+pub enum RenderResult {
+    GoNextTick,
+    StopRendering,
+}
+
 struct State<'a> {
     instance: Instance,
     surface: Surface<'a>,
@@ -26,6 +31,8 @@ struct State<'a> {
     render_pipeline: RenderPipeline,
     quad_mesh: Mesh,
     quad_material: Material,
+    texture_full_width: u32,
+    texture_full_height: u32,
     // triangle_mesh: Buffer,
     // triangle_material: Material,
 }
@@ -114,9 +121,17 @@ impl<'a> State<'a> {
             &material_bind_group_layout,
         );
 
+        let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+        let texture_full_width: u32 =
+            quad_material.width + (block_size - (quad_material.width % block_size)) % block_size;
+        let texture_full_height: u32 =
+            quad_material.height + (block_size - (quad_material.height % block_size)) % block_size;
+        // Using quad texture.
+        let texture_full_height: u32 = texture_full_width;
+
         let quad_texture_ratio =
-            calculate_ratio(quad_material.width as f32, quad_material.height as f32);
-        // println!("Image aspect ratio: {}", quad_texture_ratio);
+            calculate_ratio(quad_material.width as f32, quad_material.height as f32)
+                / calculate_ratio(texture_full_width as f32, texture_full_height as f32);
 
         let quad_mesh = make_rect(quad_texture_ratio, &device);
 
@@ -142,12 +157,14 @@ impl<'a> State<'a> {
             render_pipeline,
             quad_mesh,
             quad_material,
+            texture_full_width,
+            texture_full_height,
             // triangle_mesh,
             // triangle_material,
         }
     }
 
-    async fn render(&mut self) -> Result<(), SurfaceError> {
+    async fn render(&mut self) -> Result<RenderResult, SurfaceError> {
         /*
         // Texture View: render on Window.
         let drawable = self.surface.get_current_texture()?;
@@ -157,16 +174,11 @@ impl<'a> State<'a> {
         */
 
         // Texture View: render on Image.
-        let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-        let texture_full_width: u32 = self.quad_material.width
-            + (block_size - (self.quad_material.width % block_size)) % block_size;
-        let texture_full_height: u32 = self.quad_material.height
-            + (block_size - (self.quad_material.height % block_size)) % block_size;
         let texture = self.device.create_texture(&TextureDescriptor {
             label: Some("Output texture"),
             size: Extent3d {
-                width: texture_full_width,
-                height: texture_full_height,
+                width: self.texture_full_width,
+                height: self.texture_full_height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -180,7 +192,7 @@ impl<'a> State<'a> {
         let u32_size = size_of::<u32>() as u32;
         let output_buffer_desc = BufferDescriptor {
             label: None,
-            size: (u32_size * texture_full_width * texture_full_height) as BufferAddress,
+            size: (u32_size * self.texture_full_width * self.texture_full_height) as BufferAddress,
             usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
             mapped_at_creation: false,
         };
@@ -239,13 +251,13 @@ impl<'a> State<'a> {
                 buffer: &output_buffer,
                 layout: TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(u32_size * texture_full_width),
-                    rows_per_image: Some(texture_full_height),
+                    bytes_per_row: Some(u32_size * self.texture_full_width),
+                    rows_per_image: Some(self.texture_full_height),
                 },
             },
             Extent3d {
-                width: texture_full_width,
-                height: texture_full_height,
+                width: self.texture_full_width,
+                height: self.texture_full_height,
                 depth_or_array_layers: 1,
             },
         );
@@ -266,9 +278,12 @@ impl<'a> State<'a> {
 
             let data = buffer_slice.get_mapped_range();
 
-            let buffer =
-                ImageBuffer::<Rgba<u8>, _>::from_raw(texture_full_width, texture_full_height, data)
-                    .unwrap();
+            let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(
+                self.texture_full_width,
+                self.texture_full_height,
+                data,
+            )
+            .unwrap();
             buffer.save("image.png").unwrap();
         }
         output_buffer.unmap();
@@ -276,9 +291,10 @@ impl<'a> State<'a> {
         // Draw on a Window.
         /*
         drawable.present();
+        Ok(RenderResult::GoNextTick)
         */
 
-        Ok(())
+        Ok(RenderResult::StopRendering)
     }
 
     fn resize(&mut self, new_size: (i32, i32)) {
@@ -300,14 +316,12 @@ impl<'a> State<'a> {
 }
 
 pub async fn gpu_main() {
-    let mut glfw = glfw::init(fail_on_errors!()).unwrap();
-
-    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-
     const WIN_WIDTH: u32 = 900;
     const WIN_HEIGHT: u32 = 900;
     const WIN_TITLE: &str = "Window title";
 
+    let mut glfw = glfw::init(fail_on_errors!()).unwrap();
+    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
     let (mut window, events) = glfw
         .create_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE, glfw::WindowMode::Windowed)
         .unwrap();
@@ -347,9 +361,12 @@ pub async fn gpu_main() {
         }
 
         match state.render().await {
-            Ok(_) => {
-                break;
-            }
+            Ok(render_result) => match render_result {
+                RenderResult::GoNextTick => {}
+                RenderResult::StopRendering => {
+                    break;
+                }
+            },
             Err(SurfaceError::Lost | SurfaceError::Outdated) => {
                 // Workaround on Window Resize.
                 state.update_surface();

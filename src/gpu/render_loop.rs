@@ -102,18 +102,18 @@ pub async fn render_finish(
 }
 
 pub async fn gpu_main() {
+    // Window
     let mut window = Window::new();
-
     let (width, height) = window.get_framebuffer_size();
     let render_context = window.get_render_context();
+
+    // State
     let mut state = State::new(width, height, &render_context).await;
 
-    let material_bind_group_layout = {
-        let mut bind_group_layout_builder = BindGroupLayoutBuilder::new(&state.device);
-        bind_group_layout_builder.add_material();
-        bind_group_layout_builder.build("Material Bind Group Layout")
-    };
-
+    // Setup
+    let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)
+        .add_material()
+        .build("Material Bind Group Layout");
     let render_pipeline = {
         let mut pipeline_builder = PipelineBuilder::new(&state.device);
         pipeline_builder.set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main");
@@ -122,7 +122,6 @@ pub async fn gpu_main() {
         pipeline_builder.add_bind_group_layout(&material_bind_group_layout);
         pipeline_builder.build("Render Pipeline")
     };
-
     let quad_material = Material::new(
         "input/20230301_224920.jpg",
         &state.device,
@@ -130,7 +129,6 @@ pub async fn gpu_main() {
         "Quad Material",
         &material_bind_group_layout,
     );
-
     let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     let texture_full_width: u32 =
         quad_material.width + (block_size - (quad_material.width % block_size)) % block_size;

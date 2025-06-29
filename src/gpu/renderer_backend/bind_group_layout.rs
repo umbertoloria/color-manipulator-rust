@@ -19,7 +19,7 @@ impl<'a> BindGroupLayoutBuilder<'a> {
         self.entries.clear();
     }
 
-    pub fn add_material(&mut self) {
+    pub fn add_material(&mut self) -> &mut Self {
         self.entries.push(BindGroupLayoutEntry {
             binding: self.entries.len() as u32,
             visibility: ShaderStages::FRAGMENT,
@@ -36,6 +36,7 @@ impl<'a> BindGroupLayoutBuilder<'a> {
             ty: BindingType::Sampler(SamplerBindingType::Filtering),
             count: None,
         });
+        self
     }
 
     pub fn build(&mut self, label: &str) -> BindGroupLayout {

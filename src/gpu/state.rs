@@ -1,8 +1,7 @@
 use glfw::PRenderContext;
 use wgpu::{
-    Backends, Device, DeviceDescriptor, Instance, InstanceDescriptor, PowerPreference, Queue
-    , RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat,
-    TextureUsages,
+    Backends, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, PowerPreference,
+    Queue, RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat, TextureUsages,
 };
 
 pub struct State<'a> {
@@ -35,19 +34,12 @@ impl<'a> State<'a> {
             .await
             .unwrap();
 
-        /*
         let device_descriptor = DeviceDescriptor {
             label: Some("Device"),
             required_features: Features::empty(),
-            required_limits: Limits::default(),
-            memory_hints: MemoryHints::default(),
-            trace: Trace::default(),
+            ..Default::default()
         };
-        */
-        let (device, queue) = adapter
-            .request_device(&DeviceDescriptor::default())
-            .await
-            .unwrap();
+        let (device, queue) = adapter.request_device(&device_descriptor).await.unwrap();
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         /*
@@ -58,8 +50,8 @@ impl<'a> State<'a> {
             .filter(|f| f.is_srgb())
             .next()
             .unwrap_or(surface_capabilities.formats[0]);
-        for x in surface_capabilities.formats {
-            println!(" -> {:?}", x);
+        for surface_format in surface_capabilities.formats {
+            println!(" -> {:?}", surface_format);
         }
         println!(" PICKED -> {:?}", surface_format);
         */

@@ -1,31 +1,26 @@
-use crate::gpu::render_loop::{render_finish, render_start, RenderResult, U32_SIZE};
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::PRenderContext;
 use wgpu::{
-    Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Extent3d, IndexFormat,
-    Instance, InstanceDescriptor, LoadOp, Operations, Origin3d, PowerPreference, Queue,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
-    StoreOp, Surface, SurfaceConfiguration, TexelCopyBufferInfo, TexelCopyBufferLayout,
-    TexelCopyTextureInfo, TextureAspect, TextureFormat, TextureUsages,
+    Backends, Device, DeviceDescriptor, Instance, InstanceDescriptor, PowerPreference, Queue,
+    RenderPipeline, RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat,
+    TextureUsages,
 };
 
 pub struct State<'a> {
     instance: Instance,
     surface: Surface<'a>,
-    device: Device, // Abstract GPU
-    queue: Queue,   // For submitting works
+    pub device: Device, // Abstract GPU
+    pub queue: Queue,   // For submitting works
     config: SurfaceConfiguration,
     pub size: (u32, u32),
-    render_pipeline: RenderPipeline,
-    quad_mesh: Mesh,
-    quad_material: Material,
-    texture_full_width: u32,
-    texture_full_height: u32,
-    // triangle_mesh: Buffer,
-    // triangle_material: Material,
+    pub render_pipeline: RenderPipeline,
+    pub quad_mesh: Mesh,
+    pub quad_material: Material,
+    pub texture_full_width: u32,
+    pub texture_full_height: u32,
 }
 impl<'a> State<'a> {
     pub async fn new(
@@ -154,94 +149,6 @@ impl<'a> State<'a> {
             // triangle_mesh,
             // triangle_material,
         }
-    }
-
-    pub async fn render(&mut self) -> RenderResult {
-        let (
-            //
-            texture,
-            texture_view,
-            output_buffer,
-        ) = render_start(
-            &self.device,
-            self.texture_full_width,
-            self.texture_full_height,
-        );
-
-        // Command Encoder
-        let c_e_descriptor = CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        };
-        let mut command_encoder = self.device.create_command_encoder(&c_e_descriptor);
-        {
-            let render_pass_color_attachment = RenderPassColorAttachment {
-                view: &texture_view,
-                resolve_target: None,
-                ops: Operations {
-                    load: LoadOp::Clear(Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.0,
-                    }),
-                    store: StoreOp::Store,
-                },
-            };
-            let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(render_pass_color_attachment)],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
-            render_pass.set_pipeline(&self.render_pipeline);
-
-            render_pass.set_bind_group(0, &self.quad_material.bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
-            render_pass
-                .set_index_buffer(self.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.quad_mesh.index_buffer_len, 0, 0..1);
-
-            /*
-            render_pass.set_bind_group(0, &self.triangle_material.bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
-            render_pass.draw(0..3, 0..1);
-            */
-        }
-
-        // Render on a Texture.
-        command_encoder.copy_texture_to_buffer(
-            TexelCopyTextureInfo {
-                aspect: TextureAspect::All,
-                texture: &texture,
-                mip_level: 0,
-                origin: Origin3d::ZERO,
-            },
-            TexelCopyBufferInfo {
-                buffer: &output_buffer,
-                layout: TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(U32_SIZE * self.texture_full_width),
-                    rows_per_image: Some(self.texture_full_height),
-                },
-            },
-            Extent3d {
-                width: self.texture_full_width,
-                height: self.texture_full_height,
-                depth_or_array_layers: 1,
-            },
-        );
-        self.queue.submit(Some(command_encoder.finish()));
-
-        let render_result = render_finish(
-            &self.device,
-            &output_buffer,
-            self.texture_full_width,
-            self.texture_full_height,
-        )
-        .await;
-
-        render_result
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) {

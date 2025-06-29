@@ -4,8 +4,11 @@ use glfw::{flush_messages, Action, Key, WindowEvent};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Buffer, BufferAddress, BufferDescriptor, BufferUsages, Device, Extent3d, MapMode, PollType,
-    Texture, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages, TextureView,
+    Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
+    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
+    RenderPassColorAttachment, RenderPassDescriptor, StoreOp, TexelCopyBufferInfo,
+    TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
+    TextureDimension, TextureFormat, TextureUsages, TextureView,
 };
 
 pub enum RenderResult {
@@ -130,7 +133,91 @@ pub async fn gpu_main() {
         }
 
         // Render
-        match state.render().await {
+        let (
+            //
+            texture,
+            texture_view,
+            output_buffer,
+        ) = render_start(
+            &state.device,
+            state.texture_full_width,
+            state.texture_full_height,
+        );
+
+        // Command Encoder
+        let c_e_descriptor = CommandEncoderDescriptor {
+            label: Some("Render Encoder"),
+        };
+        let mut command_encoder = state.device.create_command_encoder(&c_e_descriptor);
+        {
+            let render_pass_color_attachment = RenderPassColorAttachment {
+                view: &texture_view,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Clear(Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.0,
+                    }),
+                    store: StoreOp::Store,
+                },
+            };
+            let mut render_pass = command_encoder.begin_render_pass(&RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(render_pass_color_attachment)],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
+            render_pass.set_pipeline(&state.render_pipeline);
+
+            render_pass.set_bind_group(0, &state.quad_material.bind_group, &[]);
+            render_pass.set_vertex_buffer(0, state.quad_mesh.vertex_buffer.slice(..));
+            render_pass
+                .set_index_buffer(state.quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
+            render_pass.draw_indexed(0..state.quad_mesh.index_buffer_len, 0, 0..1);
+
+            /*
+            render_pass.set_bind_group(0, &state.triangle_material.bind_group, &[]);
+            render_pass.set_vertex_buffer(0, state.triangle_mesh.slice(..));
+            render_pass.draw(0..3, 0..1);
+            */
+        }
+
+        // Render on a Texture.
+        command_encoder.copy_texture_to_buffer(
+            TexelCopyTextureInfo {
+                aspect: TextureAspect::All,
+                texture: &texture,
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+            },
+            TexelCopyBufferInfo {
+                buffer: &output_buffer,
+                layout: TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(U32_SIZE * state.texture_full_width),
+                    rows_per_image: Some(state.texture_full_height),
+                },
+            },
+            Extent3d {
+                width: state.texture_full_width,
+                height: state.texture_full_height,
+                depth_or_array_layers: 1,
+            },
+        );
+        state.queue.submit(Some(command_encoder.finish()));
+
+        let render_result = render_finish(
+            &state.device,
+            &output_buffer,
+            state.texture_full_width,
+            state.texture_full_height,
+        )
+        .await;
+
+        match render_result {
             RenderResult::GoNextTick => {}
             RenderResult::StopRendering => {
                 break;

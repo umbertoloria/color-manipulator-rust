@@ -1,16 +1,16 @@
 use glfw::PRenderContext;
 use wgpu::{
-    Backends, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, PowerPreference,
+    Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, PowerPreference,
     Queue, RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat, TextureUsages,
 };
 
 pub struct State<'a> {
     instance: Instance,
-    surface: Surface<'a>,
     pub device: Device, // Abstract GPU
     pub queue: Queue,   // For submitting works
-    pub config: SurfaceConfiguration,
-    pub size: (u32, u32),
+    surface: Surface<'a>,
+    pub surface_config: SurfaceConfiguration,
+    pub curr_win_size: (u32, u32),
 }
 impl<'a> State<'a> {
     pub async fn new(
@@ -18,11 +18,7 @@ impl<'a> State<'a> {
         framebuffer_height: u32,
         render_context: &'a PRenderContext,
     ) -> Self {
-        let instance_descriptor = InstanceDescriptor {
-            backends: Backends::all(),
-            ..Default::default()
-        };
-        let instance = Instance::new(&instance_descriptor);
+        let instance = Instance::new(&InstanceDescriptor::default());
         let surface = Self::create_wgpu_surface(&instance, render_context);
 
         let adapter = instance
@@ -42,20 +38,7 @@ impl<'a> State<'a> {
         let (device, queue) = adapter.request_device(&device_descriptor).await.unwrap();
 
         let surface_capabilities = surface.get_capabilities(&adapter);
-        /*
-        let surface_format = surface_capabilities
-            .formats
-            .iter()
-            .copied()
-            .filter(|f| f.is_srgb())
-            .next()
-            .unwrap_or(surface_capabilities.formats[0]);
-        for surface_format in surface_capabilities.formats {
-            println!(" -> {:?}", surface_format);
-        }
-        println!(" PICKED -> {:?}", surface_format);
-        */
-        let config = SurfaceConfiguration {
+        let surface_config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             // Don't do "format: surface_format" since it picks "Bgra8UnormSrgb" (at least on my PC)
             // but it's the wrong one.
@@ -67,24 +50,24 @@ impl<'a> State<'a> {
             view_formats: Vec::new(),
             desired_maximum_frame_latency: 2,
         };
-        surface.configure(&device, &config);
+        surface.configure(&device, &surface_config);
 
         Self {
             instance,
             surface,
             device,
             queue,
-            config,
-            size: (framebuffer_width, framebuffer_height),
+            surface_config,
+            curr_win_size: (framebuffer_width, framebuffer_height),
         }
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) {
         if new_size.0 > 0 && new_size.1 > 0 {
-            self.size = new_size;
-            self.config.width = new_size.0;
-            self.config.height = new_size.1;
-            self.surface.configure(&self.device, &self.config);
+            self.curr_win_size = new_size;
+            self.surface_config.width = new_size.0;
+            self.surface_config.height = new_size.1;
+            self.surface.configure(&self.device, &self.surface_config);
         }
     }
 

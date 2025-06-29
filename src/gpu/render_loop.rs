@@ -116,7 +116,7 @@ pub async fn gpu_main() {
         .build("Material Bind Group Layout");
     let render_pipeline = PipelineBuilder::new(&state.device)
         .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
-        .set_pixel_format(state.config.format)
+        .set_pixel_format(state.surface_config.format)
         .add_vertex_buffer_layout(Vertex::get_layout())
         .add_bind_group_layout(&material_bind_group_layout)
         .build("Render Pipeline");
@@ -160,7 +160,7 @@ pub async fn gpu_main() {
                 WindowEvent::Pos(..) => {
                     // Workaround for Window Move.
                     state.update_surface(&render_context);
-                    state.resize(state.size);
+                    state.resize(state.curr_win_size);
                 }
 
                 _ => {

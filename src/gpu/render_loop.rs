@@ -16,8 +16,10 @@ use wgpu::{
     TextureDimension, TextureUsages, TextureView,
 };
 
-const RESULT_GPU_FILENAME: &str = "result.png";
-const RESULT_FINAL_FILENAME: &str = "result.png";
+pub const GPU_INPUT_FILENAME: &str = "input/20230301_224920.jpg";
+const GPU_MIDDLE_FILENAME: &str = "result.png";
+pub const GPU_FINAL_FILENAME: &str = "result.png";
+pub const GPU_DIFF_FILENAME: &str = "result_diff.png";
 
 pub async fn gpu_main() {
     // WGPU
@@ -56,7 +58,7 @@ pub async fn gpu_main() {
         .add_bind_group_layout(&material_bind_group_layout)
         .build("Render Pipeline");
     let quad_material = Material::new(
-        "input/20230301_224920.jpg",
+        GPU_INPUT_FILENAME,
         &wgpu_wrapper.device,
         &wgpu_wrapper.queue,
         "Quad Material",
@@ -100,8 +102,8 @@ pub async fn gpu_main() {
     .await;
 
     resize_and_save_image_truncated(
-        Path::new(RESULT_GPU_FILENAME),
-        Path::new(RESULT_FINAL_FILENAME),
+        Path::new(GPU_MIDDLE_FILENAME),
+        Path::new(GPU_FINAL_FILENAME),
         (texture_full_width as f32 / image_real_ratio) as u32,
         quad_material.width,
         quad_material.height,
@@ -267,7 +269,7 @@ pub async fn render_finish(
         let data = buffer_slice.get_mapped_range();
 
         let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
-        buffer.save(RESULT_GPU_FILENAME).unwrap();
+        buffer.save(GPU_MIDDLE_FILENAME).unwrap();
     }
     output_buffer.unmap();
 

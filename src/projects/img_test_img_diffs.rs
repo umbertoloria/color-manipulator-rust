@@ -12,7 +12,8 @@ pub fn test_img_diffs() {
         &get_path_out("20250201_0220.png_diff.png"),
     );
 }
-fn create_and_save_int_diff_image_from_paths(
+
+pub fn create_and_save_int_diff_image_from_paths(
     filename1: &str,
     filename2: &str,
     filename_diff: &str,

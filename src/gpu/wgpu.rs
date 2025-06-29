@@ -1,6 +1,6 @@
 use wgpu::{
-    Adapter, Device, DeviceDescriptor, Features, Instance, PowerPreference, Queue,
-    RequestAdapterOptionsBase, Surface, TextureFormat,
+    Adapter, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, PowerPreference,
+    Queue, RequestAdapterOptionsBase, Surface, TextureFormat,
 };
 
 pub const USED_PIXEL_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
@@ -11,6 +11,9 @@ pub struct WGPUWrapper {
     pub queue: Queue,
 }
 impl WGPUWrapper {
+    pub fn init_instance() -> Instance {
+        Instance::new(&InstanceDescriptor::default())
+    }
     pub async fn new(instance: &Instance, compatible_surface: Option<&Surface<'_>>) -> Self {
         let adapter = instance
             .request_adapter(&RequestAdapterOptionsBase {

@@ -4,13 +4,12 @@ use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
-use glfw::{fail_on_errors, ClientApiHint, WindowHint};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
-    Extent3d, IndexFormat, Instance, InstanceDescriptor, LoadOp, MapMode, Operations, Origin3d,
-    PollType, RenderPassColorAttachment, RenderPassDescriptor, StoreOp, TexelCopyBufferInfo,
+    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
+    RenderPassColorAttachment, RenderPassDescriptor, StoreOp, TexelCopyBufferInfo,
     TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
     TextureDimension, TextureFormat, TextureUsages, TextureView,
 };
@@ -108,19 +107,19 @@ pub async fn render_finish(
 
 pub async fn gpu_main() {
     // WGPU
-    let instance = Instance::new(&InstanceDescriptor::default());
+    let instance = WGPUWrapper::init_instance();
 
-    // Glfw Window
+    // Glfw
     const WIN_WIDTH: u32 = 900;
     const WIN_HEIGHT: u32 = 900;
     const WIN_TITLE: &str = "Window title";
-    let mut glfw = glfw::init(fail_on_errors!()).unwrap();
-    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-    let (mut glfw_window, glfw_events) = glfw
-        .create_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE, glfw::WindowMode::Windowed)
-        .unwrap();
+    let (
+        //
+        mut glfw_window,
+        glfw_events,
+    ) = GlfwWrapper::init_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE);
     let glfw_render_context = glfw_window.render_context();
-    let window_surface = WindowState::create_glfw_surface(&instance, &glfw_render_context);
+    let window_surface = GlfwWrapper::create_glfw_surface(&instance, &glfw_render_context);
 
     // WGPU Wrapper
     let wgpu_wrapper = WGPUWrapper::new(&instance, Some(&window_surface)).await;

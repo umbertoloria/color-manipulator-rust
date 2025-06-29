@@ -1,12 +1,37 @@
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
-use glfw::{flush_messages, Action, GlfwReceiver, Key, PRenderContext, PWindow, WindowEvent};
+use glfw::{
+    fail_on_errors, flush_messages, Action, ClientApiHint, GlfwReceiver, Key, PRenderContext,
+    PWindow, WindowEvent, WindowHint,
+};
 use wgpu::{Adapter, Device, Instance, Surface, SurfaceConfiguration, TextureUsages};
 
 pub struct GlfwWrapper<'a> {
-    pub window_state: WindowState<'a>,
-    pub glfw_events: GlfwReceiver<(f64, WindowEvent)>,
+    window_state: WindowState<'a>,
+    glfw_events: GlfwReceiver<(f64, WindowEvent)>,
 }
 impl<'a> GlfwWrapper<'a> {
+    pub fn init_window(
+        width: u32,
+        height: u32,
+        title: &str,
+    ) -> (PWindow, GlfwReceiver<(f64, WindowEvent)>) {
+        let mut glfw = glfw::init(fail_on_errors!()).unwrap();
+        glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
+        let (glfw_window, glfw_events) = glfw
+            .create_window(width, height, title, glfw::WindowMode::Windowed)
+            .unwrap();
+        (
+            //
+            glfw_window,
+            glfw_events,
+        )
+    }
+    pub fn create_glfw_surface(
+        instance: &Instance,
+        glfw_render_context: &'a PRenderContext,
+    ) -> Surface<'a> {
+        instance.create_surface(glfw_render_context).unwrap()
+    }
     pub fn new(
         window_state: WindowState<'a>,
         glfw_events: GlfwReceiver<(f64, WindowEvent)>,
@@ -83,7 +108,7 @@ impl<'a> WindowState<'a> {
         }
     }
     pub fn update_surface(&mut self, instance: &Instance, glfw_render_context: &'a PRenderContext) {
-        self.surface = Self::create_glfw_surface(&instance, glfw_render_context);
+        self.surface = GlfwWrapper::create_glfw_surface(&instance, glfw_render_context);
     }
     pub fn enable_events_polling(&mut self) {
         // self.glfw_window.set_all_polling(true);
@@ -124,11 +149,5 @@ impl<'a> WindowState<'a> {
                 }
             }
         }
-    }
-    pub fn create_glfw_surface(
-        instance: &Instance,
-        glfw_render_context: &'a PRenderContext,
-    ) -> Surface<'a> {
-        instance.create_surface(glfw_render_context).unwrap()
     }
 }

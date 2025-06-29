@@ -2,7 +2,7 @@ use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
-use glfw::{fail_on_errors, Action, ClientApiHint, Key, Window, WindowEvent, WindowHint};
+use glfw::{fail_on_errors, Action, ClientApiHint, Key, PRenderContext, WindowEvent, WindowHint};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -26,8 +26,7 @@ struct State<'a> {
     device: Device, // Abstract GPU
     queue: Queue,   // For submitting works
     config: SurfaceConfiguration,
-    size: (i32, i32),
-    window: &'a mut Window,
+    size: (u32, u32),
     render_pipeline: RenderPipeline,
     quad_mesh: Mesh,
     quad_material: Material,
@@ -37,15 +36,17 @@ struct State<'a> {
     // triangle_material: Material,
 }
 impl<'a> State<'a> {
-    async fn new(window: &'a mut Window) -> Self {
-        let (width, height) = window.get_framebuffer_size();
-
+    async fn new(
+        framebuffer_width: u32,
+        framebuffer_height: u32,
+        render_context: &'a PRenderContext,
+    ) -> Self {
         let instance_descriptor = InstanceDescriptor {
             backends: Backends::all(),
             ..Default::default()
         };
         let instance = Instance::new(&instance_descriptor);
-        let surface = Self::create_wgpu_surface(&instance, window);
+        let surface = Self::create_wgpu_surface(&instance, render_context);
 
         let adapter = instance
             .request_adapter(&RequestAdapterOptionsBase {
@@ -89,8 +90,8 @@ impl<'a> State<'a> {
             // Don't do "format: surface_format" since it picks "Bgra8UnormSrgb" (at least on my PC)
             // but it's the wrong one.
             format: TextureFormat::Rgba8UnormSrgb, // Right one.
-            width: width as u32,
-            height: height as u32,
+            width: framebuffer_width,
+            height: framebuffer_height,
             present_mode: surface_capabilities.present_modes[0],
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: Vec::new(),
@@ -152,8 +153,7 @@ impl<'a> State<'a> {
             device,
             queue,
             config,
-            size: (width, height),
-            window,
+            size: (framebuffer_width, framebuffer_height),
             render_pipeline,
             quad_mesh,
             quad_material,
@@ -297,21 +297,21 @@ impl<'a> State<'a> {
         Ok(RenderResult::StopRendering)
     }
 
-    fn resize(&mut self, new_size: (i32, i32)) {
+    fn resize(&mut self, new_size: (u32, u32)) {
         if new_size.0 > 0 && new_size.1 > 0 {
             self.size = new_size;
-            self.config.width = new_size.0 as u32;
-            self.config.height = new_size.1 as u32;
+            self.config.width = new_size.0;
+            self.config.height = new_size.1;
             self.surface.configure(&self.device, &self.config);
         }
     }
 
-    fn update_surface(&mut self) {
-        self.surface = Self::create_wgpu_surface(&self.instance, self.window);
+    fn update_surface(&mut self, render_context: &'a PRenderContext) {
+        self.surface = Self::create_wgpu_surface(&self.instance, render_context);
     }
 
-    fn create_wgpu_surface(instance: &Instance, window: &mut Window) -> Surface<'a> {
-        instance.create_surface(window.render_context()).unwrap()
+    fn create_wgpu_surface(instance: &Instance, render_context: &'a PRenderContext) -> Surface<'a> {
+        instance.create_surface(render_context).unwrap()
     }
 }
 
@@ -325,32 +325,33 @@ pub async fn gpu_main() {
     let (mut window, events) = glfw
         .create_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE, glfw::WindowMode::Windowed)
         .unwrap();
+    let (width, height) = window.get_framebuffer_size();
+    let width = width as u32;
+    let height = height as u32;
+    let render_context = window.render_context();
+    let mut state = State::new(width, height, &render_context).await;
 
-    let mut state = State::new(&mut window).await;
+    // window.set_all_polling(true);
+    window.set_key_polling(true);
+    window.set_framebuffer_size_polling(true);
+    window.set_pos_polling(true);
+    // window.set_mouse_button_polling(true);
 
-    // state.window.set_all_polling(true);
-    state.window.set_key_polling(true);
-    state.window.set_framebuffer_size_polling(true);
-    state.window.set_pos_polling(true);
-    // state.window.set_mouse_button_polling(true);
-
-    while !state.window.should_close() {
+    while !window.should_close() {
         glfw.poll_events();
 
         for (_, event) in glfw::flush_messages(&events) {
             match event {
-                WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    state.window.set_should_close(true)
-                }
+                WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
 
                 WindowEvent::FramebufferSize(width, height) => {
-                    state.update_surface();
-                    state.resize((width, height));
+                    state.update_surface(&render_context);
+                    state.resize((width as u32, height as u32));
                 }
 
                 WindowEvent::Pos(..) => {
                     // Workaround for Window Move.
-                    state.update_surface();
+                    state.update_surface(&render_context);
                     state.resize(state.size);
                 }
 
@@ -369,7 +370,7 @@ pub async fn gpu_main() {
             },
             Err(SurfaceError::Lost | SurfaceError::Outdated) => {
                 // Workaround on Window Resize.
-                state.update_surface();
+                state.update_surface(&render_context);
                 state.resize(state.size);
             }
             Err(e) => eprintln!("{:?}", e),

@@ -1,16 +1,15 @@
-use crate::gpu::render_loop::{render_start, RenderResult, U32_SIZE};
+use crate::gpu::render_loop::{render_finish, render_start, RenderResult, U32_SIZE};
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use glfw::PRenderContext;
-use image::{ImageBuffer, Rgba};
 use wgpu::{
     Backends, Color, CommandEncoderDescriptor, Device, DeviceDescriptor, Extent3d, IndexFormat,
-    Instance, InstanceDescriptor, LoadOp, Operations, Origin3d, PollType, PowerPreference, Queue,
+    Instance, InstanceDescriptor, LoadOp, Operations, Origin3d, PowerPreference, Queue,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptionsBase,
-    StoreOp, Surface, SurfaceConfiguration, SurfaceError, TexelCopyBufferInfo,
-    TexelCopyBufferLayout, TexelCopyTextureInfo, TextureAspect, TextureFormat, TextureUsages,
+    StoreOp, Surface, SurfaceConfiguration, TexelCopyBufferInfo, TexelCopyBufferLayout,
+    TexelCopyTextureInfo, TextureAspect, TextureFormat, TextureUsages,
 };
 
 pub struct State<'a> {
@@ -157,8 +156,13 @@ impl<'a> State<'a> {
         }
     }
 
-    pub async fn render(&mut self) -> Result<RenderResult, SurfaceError> {
-        let (texture, texture_view, output_buffer) = render_start(
+    pub async fn render(&mut self) -> RenderResult {
+        let (
+            //
+            texture,
+            texture_view,
+            output_buffer,
+        ) = render_start(
             &self.device,
             self.texture_full_width,
             self.texture_full_height,
@@ -229,38 +233,15 @@ impl<'a> State<'a> {
         );
         self.queue.submit(Some(command_encoder.finish()));
 
-        // Save Texture on an Image.
-        {
-            let buffer_slice = output_buffer.slice(..);
+        let render_result = render_finish(
+            &self.device,
+            &output_buffer,
+            self.texture_full_width,
+            self.texture_full_height,
+        )
+        .await;
 
-            // NOTE: We have to create the mapping THEN device.poll() before await
-            // the future. Otherwise, the application will freeze.
-            let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
-            buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-                tx.send(result).unwrap();
-            });
-            self.device.poll(PollType::Wait).unwrap();
-            rx.receive().await.unwrap().unwrap();
-
-            let data = buffer_slice.get_mapped_range();
-
-            let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(
-                self.texture_full_width,
-                self.texture_full_height,
-                data,
-            )
-            .unwrap();
-            buffer.save("image.png").unwrap();
-        }
-        output_buffer.unmap();
-
-        // Draw on a Window.
-        /*
-        drawable.present();
-        Ok(RenderResult::GoNextTick)
-        */
-
-        Ok(RenderResult::StopRendering)
+        render_result
     }
 
     pub fn resize(&mut self, new_size: (u32, u32)) {

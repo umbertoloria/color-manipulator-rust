@@ -1,10 +1,11 @@
 use crate::gpu::state::State;
 use crate::gpu::window::Window;
 use glfw::{flush_messages, Action, Key, WindowEvent};
+use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Buffer, BufferAddress, BufferDescriptor, BufferUsages, Device, Extent3d, SurfaceError, Texture,
-    TextureDescriptor, TextureDimension, TextureFormat, TextureUsages, TextureView,
+    Buffer, BufferAddress, BufferDescriptor, BufferUsages, Device, Extent3d, MapMode, PollType,
+    Texture, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages, TextureView,
 };
 
 pub enum RenderResult {
@@ -58,6 +59,41 @@ pub fn render_start(
     )
 }
 
+pub async fn render_finish(
+    device: &Device,
+    output_buffer: &Buffer,
+    full_width: u32,
+    full_height: u32,
+) -> RenderResult {
+    // Save Texture on an Image.
+    {
+        let buffer_slice = output_buffer.slice(..);
+
+        // NOTE: We have to create the mapping THEN device.poll() before await
+        // the future. Otherwise, the application will freeze.
+        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(MapMode::Read, move |result| {
+            tx.send(result).unwrap();
+        });
+        device.poll(PollType::Wait).unwrap();
+        rx.receive().await.unwrap().unwrap();
+
+        let data = buffer_slice.get_mapped_range();
+
+        let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
+        buffer.save("image.png").unwrap();
+    }
+    output_buffer.unmap();
+
+    // Draw on a Window.
+    /*
+    drawable.present();
+    Ok(RenderResult::GoNextTick)
+    */
+
+    RenderResult::StopRendering
+}
+
 pub async fn gpu_main() {
     let mut window = Window::new();
 
@@ -95,18 +131,10 @@ pub async fn gpu_main() {
 
         // Render
         match state.render().await {
-            Ok(render_result) => match render_result {
-                RenderResult::GoNextTick => {}
-                RenderResult::StopRendering => {
-                    break;
-                }
-            },
-            Err(SurfaceError::Lost | SurfaceError::Outdated) => {
-                // Workaround on Window Resize.
-                state.update_surface(&render_context);
-                state.resize(state.size);
+            RenderResult::GoNextTick => {}
+            RenderResult::StopRendering => {
+                break;
             }
-            Err(e) => eprintln!("{:?}", e),
         };
     }
 }

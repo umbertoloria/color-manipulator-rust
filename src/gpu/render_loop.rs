@@ -1,4 +1,4 @@
-use crate::gpu::glfw::WindowState;
+use crate::gpu::glfw::{GlfwWrapper, WindowState};
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Vertex};
@@ -126,6 +126,7 @@ pub async fn gpu_main() {
     let wgpu_wrapper = WGPUWrapper::new(&instance, Some(&window_surface)).await;
 
     // Window State
+    let glfw_wrapper = GlfwWrapper::new(glfw_events);
     let mut window_state = WindowState::new(
         &wgpu_wrapper.adapter,
         &wgpu_wrapper.device,
@@ -168,7 +169,7 @@ pub async fn gpu_main() {
     window_state.enable_events_polling();
     while !window_state.should_close() {
         window_state.dispatch_events(
-            &glfw_events,
+            &glfw_wrapper,
             &instance,
             &wgpu_wrapper.device,
             &glfw_render_context,

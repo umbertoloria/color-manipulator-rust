@@ -2,9 +2,20 @@ use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use glfw::{flush_messages, Action, GlfwReceiver, Key, PRenderContext, PWindow, WindowEvent};
 use wgpu::{Adapter, Device, Instance, Surface, SurfaceConfiguration, TextureUsages};
 
+pub struct GlfwWrapper {
+    pub glfw_events: GlfwReceiver<(f64, WindowEvent)>,
+}
+impl GlfwWrapper {
+    pub fn new(glfw_events: GlfwReceiver<(f64, WindowEvent)>) -> Self {
+        Self {
+            //
+            glfw_events,
+        }
+    }
+}
+
 pub struct WindowState<'a> {
     pub glfw_window: PWindow,
-    // pub glfw_events: GlfwReceiver<(f64, WindowEvent)>,
     pub surface: Surface<'a>,
     pub surface_config: SurfaceConfiguration,
     pub curr_size: (u32, u32),
@@ -14,7 +25,6 @@ impl<'a> WindowState<'a> {
         adapter: &Adapter,
         device: &Device,
         glfw_window: PWindow,
-        // glfw_events: GlfwReceiver<(f64, WindowEvent)>,
         surface: Surface<'a>,
     ) -> Self {
         let window_size = glfw_window.get_framebuffer_size();
@@ -65,14 +75,14 @@ impl<'a> WindowState<'a> {
     }
     pub fn dispatch_events(
         &mut self,
-        events: &GlfwReceiver<(f64, WindowEvent)>,
+        glfw_wrapper: &GlfwWrapper,
         instance: &Instance,
         device: &Device,
         glfw_render_context: &'a PRenderContext,
     ) {
         // Dispatch Events
         self.glfw_window.glfw.poll_events();
-        let messages = flush_messages(&events);
+        let messages = flush_messages(&glfw_wrapper.glfw_events);
         for (_, event) in messages {
             match event {
                 WindowEvent::Key(Key::Escape, _, Action::Press, _) => {

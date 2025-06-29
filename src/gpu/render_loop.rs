@@ -1,9 +1,9 @@
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
-use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
-use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
+use crate::gpu::renderer_backend::material::Material;
+use crate::gpu::renderer_backend::mesh_builder::{make_custom_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
-use image::imageops::FilterType;
+use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
 use std::error::Error;
 use std::path::Path;
@@ -17,7 +17,7 @@ use wgpu::{
 };
 
 pub const GPU_INPUT_FILENAME: &str = "input/20230301_224920.jpg";
-const GPU_MIDDLE_FILENAME: &str = "result.png";
+const GPU_MIDDLE_FILENAME: &str = "result_middle.png";
 pub const GPU_FINAL_FILENAME: &str = "result.png";
 pub const GPU_DIFF_FILENAME: &str = "result_diff.png";
 
@@ -64,20 +64,30 @@ pub async fn gpu_main() {
         "Quad Material",
         &material_bind_group_layout,
     );
-    let image_real_ratio = quad_material.width as f32 / quad_material.height as f32;
+
     let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let texture_full_width: u32 =
-        quad_material.width + (block_size - (quad_material.width % block_size)) % block_size;
-    let texture_full_height: u32 =
-        quad_material.height + (block_size - (quad_material.height % block_size)) % block_size;
-    // Using quad texture.
-    let texture_full_height: u32 = texture_full_width;
+    let max_size_width_height = quad_material.width.max(quad_material.height);
+    let safe_filesize =
+        max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
 
-    let quad_texture_ratio =
-        calculate_ratio(quad_material.width as f32, quad_material.height as f32)
-            / calculate_ratio(texture_full_width as f32, texture_full_height as f32);
-
-    let quad_mesh = make_rect(quad_texture_ratio, &wgpu_wrapper.device);
+    // let quad_mesh = make_rect(quad_texture_ratio, &wgpu_wrapper.device);
+    let xx = quad_material.width as f32 / safe_filesize as f32 * 2.0;
+    let yy = quad_material.height as f32 / safe_filesize as f32 * 2.0;
+    let quad_mesh = make_custom_rect(
+        /*
+        // For perfect quad (stretched).
+        Vec2::new(-1.0, 1.0),  // Top-left
+        Vec2::new(1.0, 1.0),   // Top-right
+        Vec2::new(1.0, -1.0),  // Bottom-right
+        Vec2::new(-1.0, -1.0), // Bottom-left
+        */
+        // For actual sizes (proportional).
+        Vec2::new(-1.0, 1.0),           // Top-left
+        Vec2::new(-1.0 + xx, 1.0),      // Top-right
+        Vec2::new(-1.0 + xx, 1.0 - yy), // Bottom-right
+        Vec2::new(-1.0, 1.0 - yy),      // Bottom-left
+        &wgpu_wrapper.device,
+    );
 
     /*
     // Render Loop
@@ -96,15 +106,14 @@ pub async fn gpu_main() {
         &render_pipeline,
         &quad_material,
         quad_mesh,
-        texture_full_width,
-        texture_full_height,
+        safe_filesize,
+        safe_filesize,
     )
     .await;
 
     resize_and_save_image_truncated(
         Path::new(GPU_MIDDLE_FILENAME),
         Path::new(GPU_FINAL_FILENAME),
-        (texture_full_width as f32 / image_real_ratio) as u32,
         quad_material.width,
         quad_material.height,
     )
@@ -282,15 +291,13 @@ pub async fn render_finish(
 fn resize_and_save_image_truncated(
     input_path: &Path,
     output_path: &Path,
-    extended_real_height: u32,
-    new_width: u32,
-    new_height: u32,
+    crop_x_right: u32,
+    crop_y_bottom: u32,
 ) -> Result<(), Box<dyn Error>> {
     let img = ImageReader::open(input_path)?.decode()?;
 
-    let original_width = img.width();
+    /*let original_width = img.width();
     let original_height = img.height();
-
     if new_width > original_width || new_height > original_height {
         return Err(
             format!(
@@ -301,10 +308,11 @@ fn resize_and_save_image_truncated(
     }
 
     let crop_img = img.crop_imm(0, 0, original_width, extended_real_height);
+    let resized_img = crop_img.resize(new_width, new_height, FilterType::Gaussian);*/
 
-    let resized_img = crop_img.resize(new_width, new_height, FilterType::Gaussian);
+    let crop_img = img.crop_imm(0, 0, crop_x_right, crop_y_bottom);
 
     let format = ImageFormat::from_path(output_path).unwrap_or(ImageFormat::Png);
-    resized_img.save_with_format(output_path, format)?;
+    crop_img.save_with_format(output_path, format)?;
     Ok(())
 }

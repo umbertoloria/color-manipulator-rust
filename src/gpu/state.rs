@@ -1,9 +1,9 @@
+use crate::gpu::render_loop::RenderResult;
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::{calculate_ratio, Material};
 use crate::gpu::renderer_backend::mesh_builder::{make_rect, Mesh, Vertex};
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
-use crate::gpu::window::Window;
-use glfw::{flush_messages, Action, Key, PRenderContext, WindowEvent};
+use glfw::PRenderContext;
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -15,11 +15,6 @@ use wgpu::{
     TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat,
     TextureUsages,
 };
-
-pub enum RenderResult {
-    GoNextTick,
-    StopRendering,
-}
 
 pub struct State<'a> {
     instance: Instance,
@@ -37,7 +32,7 @@ pub struct State<'a> {
     // triangle_material: Material,
 }
 impl<'a> State<'a> {
-    async fn new(
+    pub async fn new(
         framebuffer_width: u32,
         framebuffer_height: u32,
         render_context: &'a PRenderContext,
@@ -313,58 +308,5 @@ impl<'a> State<'a> {
 
     fn create_wgpu_surface(instance: &Instance, render_context: &'a PRenderContext) -> Surface<'a> {
         instance.create_surface(render_context).unwrap()
-    }
-}
-
-pub async fn gpu_main() {
-    let mut window = Window::new();
-
-    let (width, height) = window.get_framebuffer_size();
-    let render_context = window.get_render_context();
-    let mut state = State::new(width, height, &render_context).await;
-
-    // Render Loop
-    window.prepare_events();
-    while !window.window.should_close() {
-        // Dispatch Events
-        window.glfw.poll_events();
-        for (_, event) in flush_messages(&window.events) {
-            match event {
-                WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    window.window.set_should_close(true);
-                }
-
-                WindowEvent::FramebufferSize(width, height) => {
-                    state.update_surface(&render_context);
-                    state.resize((width as u32, height as u32));
-                }
-
-                WindowEvent::Pos(..) => {
-                    // Workaround for Window Move.
-                    state.update_surface(&render_context);
-                    state.resize(state.size);
-                }
-
-                _ => {
-                    // println!("{:?}", e);
-                }
-            }
-        }
-
-        // Render
-        match state.render().await {
-            Ok(render_result) => match render_result {
-                RenderResult::GoNextTick => {}
-                RenderResult::StopRendering => {
-                    break;
-                }
-            },
-            Err(SurfaceError::Lost | SurfaceError::Outdated) => {
-                // Workaround on Window Resize.
-                state.update_surface(&render_context);
-                state.resize(state.size);
-            }
-            Err(e) => eprintln!("{:?}", e),
-        };
     }
 }

@@ -5,7 +5,7 @@ use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::state::{State, USED_PIXEL_FORMAT};
 use crate::gpu::win_state::WinState;
 use crate::gpu::window::Window;
-use glfw::{flush_messages, Action, Key, WindowEvent};
+use glfw::{fail_on_errors, ClientApiHint, WindowHint};
 use image::{ImageBuffer, Rgba};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -111,24 +111,23 @@ pub async fn gpu_main() {
     // WGPU
     let instance = Instance::new(&InstanceDescriptor::default());
 
-    // Window
+    // Glfw Window
     const WIN_WIDTH: u32 = 900;
     const WIN_HEIGHT: u32 = 900;
-    let mut window = Window::new(WIN_WIDTH, WIN_HEIGHT);
-    let render_context = window.get_render_context();
-    let win_surface = Window::create_glfw_surface(&instance, &render_context);
+    const WIN_TITLE: &str = "Window title";
+    let mut glfw = glfw::init(fail_on_errors!()).unwrap();
+    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
+    let (mut window, events) = glfw
+        .create_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE, glfw::WindowMode::Windowed)
+        .unwrap();
+    let render_context = window.render_context();
+    let window_surface = Window::create_glfw_surface(&instance, &render_context);
 
     // WGPU and State
-    let state = State::new(&instance, Some(&win_surface)).await;
+    let state = State::new(&instance, Some(&window_surface)).await;
 
     // WinState
-    let mut win_state = WinState::new(
-        &state.adapter,
-        &state.device,
-        win_surface,
-        window.width,
-        window.height,
-    );
+    let mut win_state = WinState::new(&state.adapter, &state.device, window, window_surface);
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)
@@ -162,32 +161,9 @@ pub async fn gpu_main() {
     let quad_mesh = make_rect(quad_texture_ratio, &state.device);
 
     // Render Loop
-    window.prepare_events();
-    while !window.window.should_close() {
-        // Dispatch Events
-        window.glfw.poll_events();
-        for (_, event) in flush_messages(&window.events) {
-            match event {
-                WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    window.window.set_should_close(true);
-                }
-
-                WindowEvent::FramebufferSize(width, height) => {
-                    win_state.update_surface(&instance, &render_context);
-                    win_state.resize(&state.device, (width as u32, height as u32));
-                }
-
-                WindowEvent::Pos(..) => {
-                    // Workaround for Window Move.
-                    win_state.update_surface(&instance, &render_context);
-                    win_state.resize(&state.device, win_state.curr_size);
-                }
-
-                _ => {
-                    // println!("{:?}", e);
-                }
-            }
-        }
+    win_state.enable_events_polling();
+    while !win_state.should_close() {
+        win_state.dispatch_events(&events, &instance, &state.device, &render_context);
 
         // Render
         let (

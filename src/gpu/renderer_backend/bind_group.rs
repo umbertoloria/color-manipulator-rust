@@ -21,11 +21,12 @@ impl<'a> BindGroupBuilder<'a> {
         self.entries.clear();
     }
 
-    pub fn set_layout(&mut self, layout: &'a BindGroupLayout) {
+    pub fn set_layout(&mut self, layout: &'a BindGroupLayout) -> &mut Self {
         self.layout = Some(layout);
+        self
     }
 
-    pub fn add_material(&mut self, view: &'a TextureView, sampler: &'a Sampler) {
+    pub fn add_material(&mut self, view: &'a TextureView, sampler: &'a Sampler) -> &mut Self {
         self.entries.push(BindGroupEntry {
             binding: self.entries.len() as u32,
             resource: BindingResource::TextureView(view),
@@ -34,6 +35,7 @@ impl<'a> BindGroupBuilder<'a> {
             binding: self.entries.len() as u32,
             resource: BindingResource::Sampler(sampler),
         });
+        self
     }
 
     pub fn build(&mut self, label: &str) -> BindGroup {

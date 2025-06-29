@@ -34,12 +34,14 @@ impl<'a> PipelineBuilder<'a> {
         self.bind_group_layouts.clear();
     }
 
-    pub fn add_vertex_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) {
+    pub fn add_vertex_buffer_layout(&mut self, layout: VertexBufferLayout<'static>) -> &mut Self {
         self.vertex_buffer_layouts.push(layout);
+        self
     }
 
-    pub fn add_bind_group_layout(&mut self, layout: &'a BindGroupLayout) {
+    pub fn add_bind_group_layout(&mut self, layout: &'a BindGroupLayout) -> &mut Self {
         self.bind_group_layouts.push(layout);
+        self
     }
 
     pub fn set_shader_module(
@@ -47,14 +49,16 @@ impl<'a> PipelineBuilder<'a> {
         shader_filename: &str,
         vertex_entry: &str,
         fragment_entry: &str,
-    ) {
+    ) -> &mut Self {
         self.shader_filename = shader_filename.into();
         self.vertex_entry = vertex_entry.into();
         self.fragment_entry = fragment_entry.into();
+        self
     }
 
-    pub fn set_pixel_format(&mut self, pixel_format: TextureFormat) {
+    pub fn set_pixel_format(&mut self, pixel_format: TextureFormat) -> &mut Self {
         self.pixel_format = pixel_format;
+        self
     }
 
     pub fn build(&mut self, label: &str) -> RenderPipeline {

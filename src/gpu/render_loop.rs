@@ -114,14 +114,12 @@ pub async fn gpu_main() {
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&state.device)
         .add_material()
         .build("Material Bind Group Layout");
-    let render_pipeline = {
-        let mut pipeline_builder = PipelineBuilder::new(&state.device);
-        pipeline_builder.set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main");
-        pipeline_builder.set_pixel_format(state.config.format);
-        pipeline_builder.add_vertex_buffer_layout(Vertex::get_layout());
-        pipeline_builder.add_bind_group_layout(&material_bind_group_layout);
-        pipeline_builder.build("Render Pipeline")
-    };
+    let render_pipeline = PipelineBuilder::new(&state.device)
+        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
+        .set_pixel_format(state.config.format)
+        .add_vertex_buffer_layout(Vertex::get_layout())
+        .add_bind_group_layout(&material_bind_group_layout)
+        .build("Render Pipeline");
     let quad_material = Material::new(
         "input/20230301_224920.jpg",
         &state.device,

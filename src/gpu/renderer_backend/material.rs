@@ -76,10 +76,10 @@ impl Material {
         };
         let sampler = device.create_sampler(&sampler_descriptor);
 
-        let mut bind_group_builder = BindGroupBuilder::new(device);
-        bind_group_builder.set_layout(bind_group_layout);
-        bind_group_builder.add_material(&view, &sampler);
-        let bind_group = bind_group_builder.build(label);
+        let bind_group = BindGroupBuilder::new(device)
+            .set_layout(bind_group_layout)
+            .add_material(&view, &sampler)
+            .build(label);
 
         Self {
             width,

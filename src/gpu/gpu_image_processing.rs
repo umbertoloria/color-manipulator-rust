@@ -19,16 +19,9 @@ use wgpu::{
 pub async fn gpu_image_processing(
     gpu_context: &GpuContext,
     material_bind_group_layout: &BindGroupLayout,
-    image_input_bytes: &Vec<u8>,
+    image_material: &Material,
     image_output_filename: &str,
 ) {
-    // Material: Image (as Texture)
-    let image_material = gpu_context.create_material(
-        &image_input_bytes,
-        "Image Texture Material",
-        &material_bind_group_layout,
-    );
-
     // Quad Mesh
     let (
         //

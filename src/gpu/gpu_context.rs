@@ -50,16 +50,16 @@ impl GpuContext {
     }
     pub fn create_material(
         &self,
-        filename: &str,
+        bytes: &Vec<u8>,
         label: &str,
         bind_group_layout: &BindGroupLayout,
     ) -> Material {
         Material::new(
-            filename,
-            &self.wgpu_wrapper.device,
-            &self.wgpu_wrapper.queue,
+            bytes,
             label,
             &bind_group_layout,
+            &self.wgpu_wrapper.device,
+            &self.wgpu_wrapper.queue,
         )
     }
     pub fn create_render_pipeline_builder(&self) -> PipelineBuilder {

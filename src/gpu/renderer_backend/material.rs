@@ -1,8 +1,6 @@
 use crate::gpu::renderer_backend::bind_group::BindGroupBuilder;
-use crate::gpu::shaders::read_file::make_safe_filepath;
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use image::GenericImageView;
-use std::fs::read;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     AddressMode, BindGroup, BindGroupLayout, Device, Extent3d, FilterMode, Origin3d, Queue,
@@ -17,14 +15,12 @@ pub struct Material {
 }
 impl Material {
     pub fn new(
-        filename: &str,
-        device: &Device,
-        queue: &Queue,
+        bytes: &Vec<u8>,
         label: &str,
         bind_group_layout: &BindGroupLayout,
+        device: &Device,
+        queue: &Queue,
     ) -> Self {
-        let bytes = read(make_safe_filepath(filename)).expect("Can't read material!");
-
         let loaded_image = image::load_from_memory(&bytes).unwrap();
         let converted = loaded_image.to_rgba8();
         let (width, height) = loaded_image.dimensions();
@@ -88,8 +84,4 @@ impl Material {
             bind_group,
         }
     }
-}
-
-pub fn calculate_ratio(width: f32, height: f32) -> f32 {
-    width / height
 }

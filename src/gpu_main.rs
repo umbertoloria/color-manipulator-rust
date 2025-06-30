@@ -1,5 +1,5 @@
 use crate::folding::{get_path_in, get_path_out_gpu};
-use crate::gpu::render_loop::gpu_image_processing;
+use crate::gpu::gpu_image_processing::gpu_image_processing;
 
 pub async fn gpu_main() {
     gpu_image_processing(

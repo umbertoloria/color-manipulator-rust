@@ -57,10 +57,12 @@ impl<'a> PipelineBuilder<'a> {
         self
     }
 
+    /*
     pub fn set_pixel_format(&mut self, pixel_format: TextureFormat) -> &mut Self {
         self.pixel_format = pixel_format;
         self
     }
+    */
 
     pub fn build(&mut self, label: &str) -> RenderPipeline {
         let source_code = read_to_string(make_safe_filepath(&self.shader_filename))

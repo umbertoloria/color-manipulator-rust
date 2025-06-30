@@ -11,17 +11,13 @@ use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
-    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
+    Extent3d, IndexFormat, Instance, LoadOp, MapMode, Operations, Origin3d, PollType,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
     TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
     TextureDimension, TextureUsages, TextureView,
 };
 
-pub async fn gpu_image_processing(
-    //
-    input_filename: &str,
-    output_filename: &str,
-) {
+pub async fn create_gpu_context() -> (Instance, WGPUWrapper) {
     // WGPU
     let instance = WGPUWrapper::init_instance();
     let wgpu_wrapper = WGPUWrapper::new(&instance, None).await;
@@ -46,17 +42,24 @@ pub async fn gpu_image_processing(
     );
     let mut glfw_wrapper = GlfwWrapper::new(window_state, glfw_events);
     */
+    (
+        //
+        instance,
+        wgpu_wrapper,
+    )
+}
+
+pub async fn gpu_image_processing(
+    //
+    input_filename: &str,
+    output_filename: &str,
+) {
+    let (_, wgpu_wrapper) = create_gpu_context().await;
 
     // Setup
     let material_bind_group_layout = BindGroupLayoutBuilder::new(&wgpu_wrapper.device)
         .add_material()
         .build("Material Bind Group Layout");
-    let render_pipeline = PipelineBuilder::new(&wgpu_wrapper.device)
-        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
-        .set_pixel_format(USED_PIXEL_FORMAT)
-        .add_vertex_buffer_layout(Vertex::get_layout())
-        .add_bind_group_layout(&material_bind_group_layout)
-        .build("Render Pipeline");
     let quad_material = Material::new(
         input_filename,
         &wgpu_wrapper.device,
@@ -64,6 +67,11 @@ pub async fn gpu_image_processing(
         "Quad Material",
         &material_bind_group_layout,
     );
+    let render_pipeline = PipelineBuilder::new(&wgpu_wrapper.device)
+        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
+        .add_vertex_buffer_layout(Vertex::get_layout())
+        .add_bind_group_layout(&material_bind_group_layout)
+        .build("Render Pipeline");
 
     let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     let max_size_width_height = quad_material.width.max(quad_material.height);

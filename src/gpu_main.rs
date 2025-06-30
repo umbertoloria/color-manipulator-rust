@@ -10,7 +10,7 @@ pub async fn gpu_main() {
 
     // Bind Group Layout: Texture Material
     let material_bind_group_layout = gpu_context
-        .create_bind_group_layout()
+        .create_bind_group_layout_builder()
         .add_material()
         .build("Material Bind Group Layout");
 

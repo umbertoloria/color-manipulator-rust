@@ -1,6 +1,6 @@
 use crate::gpu::gpu_context::GpuContext;
 use crate::gpu::renderer_backend::material::Material;
-use crate::gpu::renderer_backend::mesh_builder::{make_custom_rect, Mesh, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::{Mesh, Vertex};
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
@@ -23,41 +23,18 @@ pub async fn gpu_image_processing(
     image_output_filename: &str,
 ) {
     // Quad Mesh
-    let (
-        //
-        bulk_image_size,
-        image_mesh,
-    ) = {
-        let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-        let max_size_width_height = image_material.width.max(image_material.height);
-        let bulk_image_size = max_size_width_height
-            + (block_size - (max_size_width_height % block_size)) % block_size;
-
-        // Offsets: to right and to bottom
-        let ox = image_material.width as f32 / bulk_image_size as f32 * 2.0;
-        let oy = image_material.height as f32 / bulk_image_size as f32 * 2.0;
-
-        let image_mesh = make_custom_rect(
-            /*
-            // For perfect quad (stretched).
-            Vec2::new(-1.0, 1.0),  // Top-left
-            Vec2::new(1.0, 1.0),   // Top-right
-            Vec2::new(1.0, -1.0),  // Bottom-right
-            Vec2::new(-1.0, -1.0), // Bottom-left
-            */
-            // For actual sizes (proportional).
-            Vec2::new(-1.0, 1.0),           // Top-left
-            Vec2::new(-1.0 + ox, 1.0),      // Top-right
-            Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
-            Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
-            &gpu_context,
-        );
-        (
-            //
-            bulk_image_size,
-            image_mesh,
-        )
-    };
+    let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    let max_size_width_height = image_material.width.max(image_material.height);
+    let bulk_image_size =
+        max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
+    let ox = image_material.width as f32 / bulk_image_size as f32 * 2.0;
+    let oy = image_material.height as f32 / bulk_image_size as f32 * 2.0;
+    let image_mesh = gpu_context.create_shape_builder().build_custom_rect(
+        Vec2::new(-1.0, 1.0),           // Top-left
+        Vec2::new(-1.0 + ox, 1.0),      // Top-right
+        Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
+        Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
+    );
 
     // Render Pipeline
     let render_pipeline = gpu_context

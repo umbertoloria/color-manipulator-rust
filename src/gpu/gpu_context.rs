@@ -1,6 +1,7 @@
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
+use crate::gpu::renderer_backend::shape::ShapeBuilder;
 use crate::gpu::wgpu::WGPUWrapper;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
@@ -45,7 +46,7 @@ pub struct GpuContext {
     wgpu_wrapper: WGPUWrapper,
 }
 impl GpuContext {
-    pub fn create_bind_group_layout(&self) -> BindGroupLayoutBuilder {
+    pub fn create_bind_group_layout_builder(&self) -> BindGroupLayoutBuilder {
         BindGroupLayoutBuilder::new(&self.wgpu_wrapper.device)
     }
     pub fn create_material(
@@ -64,6 +65,9 @@ impl GpuContext {
     }
     pub fn create_render_pipeline_builder(&self) -> PipelineBuilder {
         PipelineBuilder::new(&self.wgpu_wrapper.device)
+    }
+    pub fn create_shape_builder(&self) -> ShapeBuilder {
+        ShapeBuilder::new(self)
     }
     pub fn create_buffer_init(&self, buffer_init_descriptor: &BufferInitDescriptor) -> Buffer {
         self.wgpu_wrapper

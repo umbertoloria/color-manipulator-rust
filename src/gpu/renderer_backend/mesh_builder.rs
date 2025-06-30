@@ -1,4 +1,3 @@
-use crate::gpu::gpu_context::GpuContext;
 use glm::{Vec2, Vec3};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
@@ -8,9 +7,9 @@ use wgpu::{
 
 #[repr(C)]
 pub struct Vertex {
-    position: Vec3,
-    color: Vec3,
-    tex_coord: Vec2,
+    pub position: Vec3,
+    pub color: Vec3,
+    pub tex_coord: Vec2,
 }
 
 pub struct Mesh {
@@ -49,7 +48,7 @@ impl Vertex {
     }
 }
 
-unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
+pub unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     std::slice::from_raw_parts((p as *const T) as *const u8, size_of::<T>())
 }
 
@@ -123,61 +122,6 @@ pub fn make_rect(ratio: f32, device: &Device) -> Mesh {
         usage: BufferUsages::INDEX,
     };
     let index_buffer = device.create_buffer_init(&index_buffer_descriptor);
-
-    Mesh {
-        vertex_buffer,
-        index_buffer,
-        index_buffer_len: indices.len() as u32,
-    }
-}
-
-pub fn make_custom_rect(
-    top_left: Vec2,
-    top_right: Vec2,
-    bottom_right: Vec2,
-    bottom_left: Vec2,
-    gpu_context: &GpuContext,
-) -> Mesh {
-    // TODO: Create a Shape Builder
-    let vertices = [
-        Vertex {
-            position: Vec3::new(top_left.x, top_left.y, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0), // White.
-            tex_coord: Vec2::new(0.0, 0.0),
-        },
-        Vertex {
-            position: Vec3::new(top_right.x, top_right.y, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0), // White.
-            tex_coord: Vec2::new(1.0, 0.0),
-        },
-        Vertex {
-            position: Vec3::new(bottom_right.x, bottom_right.y, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0), // White.
-            tex_coord: Vec2::new(1.0, 1.0),
-        },
-        Vertex {
-            position: Vec3::new(bottom_left.x, bottom_left.y, 0.0),
-            color: Vec3::new(1.0, 1.0, 1.0), // White.
-            tex_coord: Vec2::new(0.0, 1.0),
-        },
-    ];
-    let vertices_bytes = unsafe { any_as_u8_slice(&vertices) };
-    let vertex_buffer_descriptor = BufferInitDescriptor {
-        label: Some("Quad vertex buffer"),
-        contents: vertices_bytes,
-        usage: BufferUsages::VERTEX,
-    };
-    let vertex_buffer = gpu_context.create_buffer_init(&vertex_buffer_descriptor);
-
-    // Typing "u16" is important!
-    let indices: [u16; 6] = [1, 0, 3, 3, 2, 1]; // First TL triangle, then BR triangle.
-    let indices_bytes = unsafe { any_as_u8_slice(&indices) };
-    let index_buffer_descriptor = BufferInitDescriptor {
-        label: Some("Quad index buffer"),
-        contents: indices_bytes,
-        usage: BufferUsages::INDEX,
-    };
-    let index_buffer = gpu_context.create_buffer_init(&index_buffer_descriptor);
 
     Mesh {
         vertex_buffer,

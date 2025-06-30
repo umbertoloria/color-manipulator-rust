@@ -9,11 +9,10 @@ use std::fs::remove_file;
 use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
-    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
-    TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
-    TextureDimension, TextureUsages, TextureView,
+    BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Extent3d,
+    IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType, RenderPassColorAttachment,
+    RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
+    TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureUsages,
 };
 
 pub async fn gpu_image_processing(
@@ -95,7 +94,7 @@ pub async fn gpu_image_processing(
     }
     */
 
-    let image_bulk_filename = &format!("{}_middle.png", image_output_filename);
+    let image_bulk_filename = &format!("{}_bulk.png", image_output_filename);
     render_full(
         gpu_context,
         &render_pipeline,
@@ -108,7 +107,7 @@ pub async fn gpu_image_processing(
     .await;
 
     // Outside GPU scope
-    resize_and_save_image_truncated(
+    save_image_output_and_remove_image_bulk(
         Path::new(image_bulk_filename),
         Path::new(image_output_filename),
         image_material.width,
@@ -117,6 +116,7 @@ pub async fn gpu_image_processing(
     .unwrap();
 }
 
+pub const U32_SIZE: u32 = size_of::<u32>() as u32;
 async fn render_full(
     gpu_context: GpuContext,
     render_pipeline: &RenderPipeline,
@@ -124,22 +124,45 @@ async fn render_full(
     quad_mesh: Mesh,
     texture_full_width: u32,
     texture_full_height: u32,
-    middle_filename: &str,
+    image_bulk_filename: &str,
 ) {
     let wgpu_wrapper = &gpu_context.wgpu_wrapper;
 
     // Render
-    let (
-        //
-        texture,
-        texture_view,
-        output_buffer,
-    ) = render_start(
-        &wgpu_wrapper.device,
-        texture_full_width,
-        texture_full_height,
-    );
+    // Render (1)
+    /*
+    // Texture View: render on Window.
+    let drawable = surface.get_current_texture().unwrap();
+    let texture_view = drawable
+        .texture
+        .create_view(&TextureViewDescriptor::default());
+    */
 
+    // Texture View: render on Image.
+    let texture = wgpu_wrapper.device.create_texture(&TextureDescriptor {
+        label: Some("Output texture"),
+        size: Extent3d {
+            width: texture_full_width,
+            height: texture_full_height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: TextureDimension::D2,
+        format: USED_PIXEL_FORMAT,
+        usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[USED_PIXEL_FORMAT],
+    });
+    let texture_view = texture.create_view(&TextureViewDescriptor::default());
+    let output_buffer_desc = BufferDescriptor {
+        label: None,
+        size: (U32_SIZE * texture_full_width * texture_full_height) as BufferAddress,
+        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    };
+    let output_buffer = wgpu_wrapper.device.create_buffer(&output_buffer_desc);
+
+    // Render (2)
     // Command Encoder
     let c_e_descriptor = CommandEncoderDescriptor {
         label: Some("Render Encoder"),
@@ -198,72 +221,8 @@ async fn render_full(
     );
     wgpu_wrapper.queue.submit(Some(command_encoder.finish()));
 
-    render_finish(
-        &wgpu_wrapper.device,
-        &output_buffer,
-        texture_full_width,
-        texture_full_height,
-        middle_filename,
-    )
-    .await;
-}
-pub const U32_SIZE: u32 = size_of::<u32>() as u32;
-pub fn render_start(
-    device: &Device,
-    full_width: u32,
-    full_height: u32,
-) -> (
-    //
-    Texture,
-    TextureView,
-    Buffer,
-) {
-    /*
-    // Texture View: render on Window.
-    let drawable = surface.get_current_texture().unwrap();
-    let texture_view = drawable
-        .texture
-        .create_view(&TextureViewDescriptor::default());
-    */
+    // Render (3)
 
-    // Texture View: render on Image.
-    let texture = device.create_texture(&TextureDescriptor {
-        label: Some("Output texture"),
-        size: Extent3d {
-            width: full_width,
-            height: full_height,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: TextureDimension::D2,
-        format: USED_PIXEL_FORMAT,
-        usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
-        view_formats: &[USED_PIXEL_FORMAT],
-    });
-    let texture_view = texture.create_view(&TextureViewDescriptor::default());
-    let output_buffer_desc = BufferDescriptor {
-        label: None,
-        size: (U32_SIZE * full_width * full_height) as BufferAddress,
-        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    };
-    let output_buffer = device.create_buffer(&output_buffer_desc);
-
-    (
-        //
-        texture,
-        texture_view,
-        output_buffer,
-    )
-}
-pub async fn render_finish(
-    device: &Device,
-    output_buffer: &Buffer,
-    full_width: u32,
-    full_height: u32,
-    middle_filename: &str,
-) {
     // Save Texture on an Image.
     {
         let buffer_slice = output_buffer.slice(..);
@@ -274,13 +233,15 @@ pub async fn render_finish(
         buffer_slice.map_async(MapMode::Read, move |result| {
             tx.send(result).unwrap();
         });
-        device.poll(PollType::Wait).unwrap();
+        wgpu_wrapper.device.poll(PollType::Wait).unwrap();
         rx.receive().await.unwrap().unwrap();
 
         let data = buffer_slice.get_mapped_range();
 
-        let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(full_width, full_height, data).unwrap();
-        buffer.save(middle_filename).unwrap();
+        let buffer =
+            ImageBuffer::<Rgba<u8>, _>::from_raw(texture_full_width, texture_full_height, data)
+                .unwrap();
+        buffer.save(image_bulk_filename).unwrap();
     }
     output_buffer.unmap();
 
@@ -290,23 +251,22 @@ pub async fn render_finish(
     */
 }
 
-fn resize_and_save_image_truncated(
-    input_path: &Path,
-    output_path: &Path,
+fn save_image_output_and_remove_image_bulk(
+    image_bulk_path: &Path,
+    image_output_path: &Path,
     crop_x_right: u32,
     crop_y_bottom: u32,
 ) -> Result<(), Box<dyn Error>> {
     {
-        let img = ImageReader::open(input_path)?.decode()?;
-        let crop_img = img.crop_imm(0, 0, crop_x_right, crop_y_bottom);
-        let png_format = ImageFormat::Png;
-        crop_img.save_with_format(output_path, png_format)?;
+        let image_bulk = ImageReader::open(image_bulk_path)?.decode()?;
+        let image_output = image_bulk.crop_imm(0, 0, crop_x_right, crop_y_bottom);
+        image_output.save_with_format(image_output_path, ImageFormat::Png)?;
 
-        let output_path_str = output_path.to_str().unwrap();
+        let output_path_str = image_output_path.to_str().unwrap();
         println!("Painting file \"{}\"", output_path_str);
     }
 
-    remove_file(Path::new(input_path))?;
+    remove_file(Path::new(image_bulk_path))?;
 
     Ok(())
 }

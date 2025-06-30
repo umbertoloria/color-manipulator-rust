@@ -1,7 +1,6 @@
-use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
+use crate::gpu::gpu_context::create_gpu_context;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::{make_custom_rect, Mesh, Vertex};
-use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
 use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
@@ -11,63 +10,28 @@ use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
-    Extent3d, IndexFormat, Instance, LoadOp, MapMode, Operations, Origin3d, PollType,
+    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
     TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor,
     TextureDimension, TextureUsages, TextureView,
 };
-
-pub async fn create_gpu_context() -> (Instance, WGPUWrapper) {
-    // WGPU
-    let instance = WGPUWrapper::init_instance();
-    let wgpu_wrapper = WGPUWrapper::new(&instance, None).await;
-
-    // Glfw
-    /*
-    const WIN_WIDTH: u32 = 900;
-    const WIN_HEIGHT: u32 = 900;
-    const WIN_TITLE: &str = "Window title";
-    let (
-        //
-        mut glfw_window,
-        glfw_events,
-    ) = GlfwWrapper::init_window(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE);
-    let glfw_render_context = glfw_window.render_context();
-    let window_surface = GlfwWrapper::create_glfw_surface(&instance, &glfw_render_context);
-    let window_state = WindowState::new(
-        &wgpu_wrapper.adapter,
-        &wgpu_wrapper.device,
-        glfw_window,
-        window_surface,
-    );
-    let mut glfw_wrapper = GlfwWrapper::new(window_state, glfw_events);
-    */
-    (
-        //
-        instance,
-        wgpu_wrapper,
-    )
-}
 
 pub async fn gpu_image_processing(
     //
     input_filename: &str,
     output_filename: &str,
 ) {
-    let (_, wgpu_wrapper) = create_gpu_context().await;
+    let gpu_context = create_gpu_context().await;
 
     // Setup
-    let material_bind_group_layout = BindGroupLayoutBuilder::new(&wgpu_wrapper.device)
+    let material_bind_group_layout = gpu_context
+        .create_bind_group_layout()
         .add_material()
         .build("Material Bind Group Layout");
-    let quad_material = Material::new(
-        input_filename,
-        &wgpu_wrapper.device,
-        &wgpu_wrapper.queue,
-        "Quad Material",
-        &material_bind_group_layout,
-    );
-    let render_pipeline = PipelineBuilder::new(&wgpu_wrapper.device)
+    let quad_material =
+        gpu_context.create_material(input_filename, "Quad Material", &material_bind_group_layout);
+    let render_pipeline = gpu_context
+        .create_render_pipeline_builder()
         .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
         .add_vertex_buffer_layout(Vertex::get_layout())
         .add_bind_group_layout(&material_bind_group_layout)
@@ -94,7 +58,7 @@ pub async fn gpu_image_processing(
         Vec2::new(-1.0 + xx, 1.0),      // Top-right
         Vec2::new(-1.0 + xx, 1.0 - yy), // Bottom-right
         Vec2::new(-1.0, 1.0 - yy),      // Bottom-left
-        &wgpu_wrapper.device,
+        &gpu_context.wgpu_wrapper.device,
     );
 
     /*
@@ -111,7 +75,7 @@ pub async fn gpu_image_processing(
 
     let middle_filename = &format!("{}_middle.png", output_filename);
     render_full(
-        &wgpu_wrapper,
+        &gpu_context.wgpu_wrapper,
         &render_pipeline,
         &quad_material,
         quad_mesh,

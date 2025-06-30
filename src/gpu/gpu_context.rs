@@ -2,7 +2,11 @@ use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::wgpu::WGPUWrapper;
-use wgpu::{BindGroupLayout, Instance};
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
+use wgpu::{
+    BindGroupLayout, Buffer, BufferDescriptor, CommandBuffer, CommandEncoder,
+    CommandEncoderDescriptor, Instance, PollType, Texture, TextureDescriptor,
+};
 
 pub async fn create_gpu_context() -> GpuContext {
     // WGPU
@@ -37,8 +41,8 @@ pub async fn create_gpu_context() -> GpuContext {
 }
 
 pub struct GpuContext {
-    pub instance: Instance,
-    pub wgpu_wrapper: WGPUWrapper,
+    instance: Instance,
+    wgpu_wrapper: WGPUWrapper,
 }
 impl GpuContext {
     pub fn create_bind_group_layout(&self) -> BindGroupLayoutBuilder {
@@ -60,5 +64,30 @@ impl GpuContext {
     }
     pub fn create_render_pipeline_builder(&self) -> PipelineBuilder {
         PipelineBuilder::new(&self.wgpu_wrapper.device)
+    }
+    pub fn create_buffer_init(&self, buffer_init_descriptor: &BufferInitDescriptor) -> Buffer {
+        self.wgpu_wrapper
+            .device
+            .create_buffer_init(&buffer_init_descriptor)
+    }
+    pub fn create_texture(&self, texture_descriptor: &TextureDescriptor) -> Texture {
+        self.wgpu_wrapper.device.create_texture(texture_descriptor)
+    }
+    pub fn create_buffer(&self, buffer_descriptor: &BufferDescriptor) -> Buffer {
+        self.wgpu_wrapper.device.create_buffer(&buffer_descriptor)
+    }
+    pub fn create_command_encoder(
+        &self,
+        command_encoder_descriptor: &CommandEncoderDescriptor,
+    ) -> CommandEncoder {
+        self.wgpu_wrapper
+            .device
+            .create_command_encoder(&command_encoder_descriptor)
+    }
+    pub fn submit_to_queue(&self, command_buffer: CommandBuffer) {
+        self.wgpu_wrapper.queue.submit(Some(command_buffer));
+    }
+    pub fn poll_activities_waiting(&self) {
+        self.wgpu_wrapper.device.poll(PollType::Wait).unwrap();
     }
 }

@@ -1,3 +1,4 @@
+use crate::gpu::gpu_context::GpuContext;
 use glm::{Vec2, Vec3};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
@@ -135,7 +136,7 @@ pub fn make_custom_rect(
     top_right: Vec2,
     bottom_right: Vec2,
     bottom_left: Vec2,
-    device: &Device,
+    gpu_context: &GpuContext,
 ) -> Mesh {
     let vertices = [
         Vertex {
@@ -165,7 +166,7 @@ pub fn make_custom_rect(
         contents: vertices_bytes,
         usage: BufferUsages::VERTEX,
     };
-    let vertex_buffer = device.create_buffer_init(&vertex_buffer_descriptor);
+    let vertex_buffer = gpu_context.create_buffer_init(&vertex_buffer_descriptor);
 
     // Typing "u16" is important!
     let indices: [u16; 6] = [1, 0, 3, 3, 2, 1]; // First TL triangle, then BR triangle.
@@ -175,7 +176,7 @@ pub fn make_custom_rect(
         contents: indices_bytes,
         usage: BufferUsages::INDEX,
     };
-    let index_buffer = device.create_buffer_init(&index_buffer_descriptor);
+    let index_buffer = gpu_context.create_buffer_init(&index_buffer_descriptor);
 
     Mesh {
         vertex_buffer,

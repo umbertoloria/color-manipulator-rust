@@ -10,7 +10,7 @@ use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Extent3d,
-    IndexFormat, LoadOp, MapMode, Operations, Origin3d, PollType, RenderPassColorAttachment,
+    IndexFormat, LoadOp, MapMode, Operations, Origin3d, RenderPassColorAttachment,
     RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
     TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureUsages,
 };
@@ -73,7 +73,7 @@ pub async fn gpu_image_processing(
             Vec2::new(-1.0 + ox, 1.0),      // Top-right
             Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
             Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
-            &gpu_context.wgpu_wrapper.device,
+            &gpu_context,
         );
         (
             //
@@ -126,9 +126,7 @@ async fn render_full(
     texture_full_height: u32,
     image_bulk_filename: &str,
 ) {
-    let wgpu_wrapper = &gpu_context.wgpu_wrapper;
-
-    // Render
+    // RENDER
     // Render (1)
     /*
     // Texture View: render on Window.
@@ -139,7 +137,7 @@ async fn render_full(
     */
 
     // Texture View: render on Image.
-    let texture = wgpu_wrapper.device.create_texture(&TextureDescriptor {
+    let texture = gpu_context.create_texture(&TextureDescriptor {
         label: Some("Output texture"),
         size: Extent3d {
             width: texture_full_width,
@@ -160,14 +158,14 @@ async fn render_full(
         usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
         mapped_at_creation: false,
     };
-    let output_buffer = wgpu_wrapper.device.create_buffer(&output_buffer_desc);
+    let output_buffer = gpu_context.create_buffer(&output_buffer_desc);
 
     // Render (2)
     // Command Encoder
     let c_e_descriptor = CommandEncoderDescriptor {
         label: Some("Render Encoder"),
     };
-    let mut command_encoder = wgpu_wrapper.device.create_command_encoder(&c_e_descriptor);
+    let mut command_encoder = gpu_context.create_command_encoder(&c_e_descriptor);
     {
         let render_pass_color_attachment = RenderPassColorAttachment {
             view: &texture_view,
@@ -219,7 +217,7 @@ async fn render_full(
             depth_or_array_layers: 1,
         },
     );
-    wgpu_wrapper.queue.submit(Some(command_encoder.finish()));
+    gpu_context.submit_to_queue(command_encoder.finish());
 
     // Render (3)
 
@@ -233,7 +231,7 @@ async fn render_full(
         buffer_slice.map_async(MapMode::Read, move |result| {
             tx.send(result).unwrap();
         });
-        wgpu_wrapper.device.poll(PollType::Wait).unwrap();
+        gpu_context.poll_activities_waiting();
         rx.receive().await.unwrap().unwrap();
 
         let data = buffer_slice.get_mapped_range();

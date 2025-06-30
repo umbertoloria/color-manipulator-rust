@@ -2,7 +2,6 @@ use crate::gpu::gpu_context::GpuContext;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::{Mesh, Vertex};
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
-use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
 use std::error::Error;
 use std::fs::remove_file;
@@ -20,25 +19,10 @@ pub async fn gpu_image_processing(
     gpu_context: &GpuContext,
     material_bind_group_layout: &BindGroupLayout,
     image_material: &Material,
+    image_mesh: &Mesh,
+    bulk_image_size: u32,
     image_output_filename: &str,
 ) {
-    // Quad Mesh
-    let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let max_size_width_height = image_material.width.max(image_material.height);
-    let bulk_image_size =
-        max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
-    let ox = image_material.width as f32 / bulk_image_size as f32 * 2.0;
-    let oy = image_material.height as f32 / bulk_image_size as f32 * 2.0;
-    let image_mesh = gpu_context
-        .create_shape_builder()
-        .use_custom_rect(
-            Vec2::new(-1.0, 1.0),           // Top-left
-            Vec2::new(-1.0 + ox, 1.0),      // Top-right
-            Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
-            Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
-        )
-        .build();
-
     // Render Pipeline
     let render_pipeline = gpu_context
         .create_render_pipeline_builder()
@@ -86,7 +70,7 @@ async fn render_full(
     gpu_context: &GpuContext,
     render_pipeline: &RenderPipeline,
     quad_material: &Material,
-    quad_mesh: Mesh,
+    quad_mesh: &Mesh,
     texture_full_width: u32,
     texture_full_height: u32,
     image_bulk_filename: &str,

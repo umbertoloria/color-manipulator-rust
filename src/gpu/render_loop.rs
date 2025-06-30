@@ -17,7 +17,7 @@ use wgpu::{
     TextureDimension, TextureUsages, TextureView,
 };
 
-pub async fn gpu_main(
+pub async fn gpu_image_processing(
     //
     input_filename: &str,
     output_filename: &str,
@@ -304,6 +304,9 @@ fn resize_and_save_image_truncated(
         let crop_img = img.crop_imm(0, 0, crop_x_right, crop_y_bottom);
         let png_format = ImageFormat::Png;
         crop_img.save_with_format(output_path, png_format)?;
+
+        let output_path_str = output_path.to_str().unwrap();
+        println!("Painting file \"{}\"", output_path_str);
     }
 
     remove_file(Path::new(input_path))?;

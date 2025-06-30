@@ -1,27 +1,30 @@
 use crate::gpu::gpu_context::GpuContext;
-use crate::gpu::renderer_backend::mesh_builder::{any_as_u8_slice, Mesh, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::{unsafe_u8_slice_from_vec_of_u16s, Mesh, Vertex};
 use glm::{Vec2, Vec3};
 use wgpu::util::BufferInitDescriptor;
 use wgpu::BufferUsages;
 
 pub struct ShapeBuilder<'a> {
+    vertices: Vec<Vertex>,
+    indices: Vec<u16>, // Typing "u16" is important!
     gpu_context: &'a GpuContext,
 }
 impl<'a> ShapeBuilder<'a> {
     pub fn new(gpu_context: &'a GpuContext) -> Self {
         Self {
-            //
+            vertices: Vec::new(),
+            indices: Vec::new(),
             gpu_context,
         }
     }
-    pub fn build_custom_rect(
-        &self,
+    pub fn use_custom_rect(
+        &mut self,
         top_left: Vec2,
         top_right: Vec2,
         bottom_right: Vec2,
         bottom_left: Vec2,
-    ) -> Mesh {
-        let vertices = [
+    ) -> &mut ShapeBuilder<'a> {
+        self.vertices = vec![
             Vertex {
                 position: Vec3::new(top_left.x, top_left.y, 0.0),
                 color: Vec3::new(1.0, 1.0, 1.0), // White.
@@ -43,9 +46,16 @@ impl<'a> ShapeBuilder<'a> {
                 tex_coord: Vec2::new(0.0, 1.0),
             },
         ];
-        let vertices_bytes = unsafe { any_as_u8_slice(&vertices) };
+        self.indices = vec![
+            1, 0, 3, // TL triangle.
+            3, 2, 1, // BR triangle.
+        ];
+        self
+    }
+    pub fn build(&self) -> Mesh {
+        let vertices_bytes = unsafe_u8_slice_from_vec_of_u16s(&self.vertices);
         let vertex_buffer_descriptor = BufferInitDescriptor {
-            label: Some("Custom rect vertex buffer"),
+            label: Some("Built vertex buffer"),
             contents: vertices_bytes,
             usage: BufferUsages::VERTEX,
         };
@@ -53,11 +63,9 @@ impl<'a> ShapeBuilder<'a> {
             .gpu_context
             .create_buffer_init(&vertex_buffer_descriptor);
 
-        // Typing "u16" is important!
-        let indices: [u16; 6] = [1, 0, 3, 3, 2, 1]; // First TL triangle, then BR triangle.
-        let indices_bytes = unsafe { any_as_u8_slice(&indices) };
+        let indices_bytes = unsafe_u8_slice_from_vec_of_u16s(&self.indices);
         let index_buffer_descriptor = BufferInitDescriptor {
-            label: Some("Custom rect index buffer"),
+            label: Some("Built index buffer"),
             contents: indices_bytes,
             usage: BufferUsages::INDEX,
         };
@@ -68,7 +76,7 @@ impl<'a> ShapeBuilder<'a> {
         Mesh {
             vertex_buffer,
             index_buffer,
-            index_buffer_len: indices.len() as u32,
+            index_buffer_len: self.indices.len() as u32,
         }
     }
 }

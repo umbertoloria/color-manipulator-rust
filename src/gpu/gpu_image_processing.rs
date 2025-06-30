@@ -29,12 +29,15 @@ pub async fn gpu_image_processing(
         max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
     let ox = image_material.width as f32 / bulk_image_size as f32 * 2.0;
     let oy = image_material.height as f32 / bulk_image_size as f32 * 2.0;
-    let image_mesh = gpu_context.create_shape_builder().build_custom_rect(
-        Vec2::new(-1.0, 1.0),           // Top-left
-        Vec2::new(-1.0 + ox, 1.0),      // Top-right
-        Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
-        Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
-    );
+    let image_mesh = gpu_context
+        .create_shape_builder()
+        .use_custom_rect(
+            Vec2::new(-1.0, 1.0),           // Top-left
+            Vec2::new(-1.0 + ox, 1.0),      // Top-right
+            Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
+            Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
+        )
+        .build();
 
     // Render Pipeline
     let render_pipeline = gpu_context

@@ -48,8 +48,17 @@ impl Vertex {
     }
 }
 
-pub unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    std::slice::from_raw_parts((p as *const T) as *const u8, size_of::<T>())
+pub fn unsafe_u8_slice_from_sized_struct<T: Sized>(data: &T) -> &[u8] {
+    unsafe {
+        let ptr = (data as *const T) as *const u8;
+        std::slice::from_raw_parts(ptr, size_of::<T>())
+    }
+}
+pub fn unsafe_u8_slice_from_vec_of_u16s<T: Sized>(data: &Vec<T>) -> &[u8] {
+    unsafe {
+        let ptr = data.as_ptr() as *const u8;
+        std::slice::from_raw_parts(ptr, data.len() * size_of::<T>())
+    }
 }
 
 pub fn make_triangle(device: &Device) -> Buffer {
@@ -70,7 +79,7 @@ pub fn make_triangle(device: &Device) -> Buffer {
             tex_coord: Vec2::new(0.5, 0.0),
         },
     ];
-    let vertices_bytes = unsafe { any_as_u8_slice(&vertices) };
+    let vertices_bytes = unsafe_u8_slice_from_sized_struct(&vertices);
     let vertex_buffer_descriptor = BufferInitDescriptor {
         label: Some("Triangle vertex buffer"),
         contents: vertices_bytes,
@@ -105,7 +114,7 @@ pub fn make_rect(ratio: f32, device: &Device) -> Mesh {
             tex_coord: Vec2::new(0.0, 0.0),
         },
     ];
-    let vertices_bytes = unsafe { any_as_u8_slice(&vertices) };
+    let vertices_bytes = unsafe_u8_slice_from_sized_struct(&vertices);
     let vertex_buffer_descriptor = BufferInitDescriptor {
         label: Some("Quad vertex buffer"),
         contents: vertices_bytes,
@@ -115,7 +124,7 @@ pub fn make_rect(ratio: f32, device: &Device) -> Mesh {
 
     // Typing "u16" is important!
     let indices: [u16; 6] = [0, 1, 2, 2, 3, 0];
-    let indices_bytes = unsafe { any_as_u8_slice(&indices) };
+    let indices_bytes = unsafe_u8_slice_from_sized_struct(&indices);
     let index_buffer_descriptor = BufferInitDescriptor {
         label: Some("Quad index buffer"),
         contents: indices_bytes,

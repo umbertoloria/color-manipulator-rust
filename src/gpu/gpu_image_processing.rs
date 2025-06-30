@@ -1,7 +1,7 @@
-use crate::gpu::gpu_context::create_gpu_context;
+use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::{make_custom_rect, Mesh, Vertex};
-use crate::gpu::wgpu::{WGPUWrapper, USED_PIXEL_FORMAT};
+use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
 use std::error::Error;
@@ -18,18 +18,27 @@ use wgpu::{
 
 pub async fn gpu_image_processing(
     //
-    input_filename: &str,
-    output_filename: &str,
+    image_input_filename: &str,
+    image_output_filename: &str,
 ) {
     let gpu_context = create_gpu_context().await;
 
-    // Setup
+    // SETUP
+
+    // Bind Group Layout: Texture Material
     let material_bind_group_layout = gpu_context
         .create_bind_group_layout()
         .add_material()
         .build("Material Bind Group Layout");
-    let quad_material =
-        gpu_context.create_material(input_filename, "Quad Material", &material_bind_group_layout);
+
+    // Material: Image (as Texture)
+    let image_material = gpu_context.create_material(
+        image_input_filename,
+        "Image Texture Material",
+        &material_bind_group_layout,
+    );
+
+    // Render Pipeline
     let render_pipeline = gpu_context
         .create_render_pipeline_builder()
         .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
@@ -37,29 +46,42 @@ pub async fn gpu_image_processing(
         .add_bind_group_layout(&material_bind_group_layout)
         .build("Render Pipeline");
 
-    let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let max_size_width_height = quad_material.width.max(quad_material.height);
-    let safe_filesize =
-        max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
+    // Quad Mesh
+    let (
+        //
+        bulk_image_size,
+        image_mesh,
+    ) = {
+        let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+        let max_size_width_height = image_material.width.max(image_material.height);
+        let bulk_image_size = max_size_width_height
+            + (block_size - (max_size_width_height % block_size)) % block_size;
 
-    // let quad_mesh = make_rect(quad_texture_ratio, &wgpu_wrapper.device);
-    let xx = quad_material.width as f32 / safe_filesize as f32 * 2.0;
-    let yy = quad_material.height as f32 / safe_filesize as f32 * 2.0;
-    let quad_mesh = make_custom_rect(
-        /*
-        // For perfect quad (stretched).
-        Vec2::new(-1.0, 1.0),  // Top-left
-        Vec2::new(1.0, 1.0),   // Top-right
-        Vec2::new(1.0, -1.0),  // Bottom-right
-        Vec2::new(-1.0, -1.0), // Bottom-left
-        */
-        // For actual sizes (proportional).
-        Vec2::new(-1.0, 1.0),           // Top-left
-        Vec2::new(-1.0 + xx, 1.0),      // Top-right
-        Vec2::new(-1.0 + xx, 1.0 - yy), // Bottom-right
-        Vec2::new(-1.0, 1.0 - yy),      // Bottom-left
-        &gpu_context.wgpu_wrapper.device,
-    );
+        // Offsets: to right and to bottom
+        let ox = image_material.width as f32 / bulk_image_size as f32 * 2.0;
+        let oy = image_material.height as f32 / bulk_image_size as f32 * 2.0;
+
+        let image_mesh = make_custom_rect(
+            /*
+            // For perfect quad (stretched).
+            Vec2::new(-1.0, 1.0),  // Top-left
+            Vec2::new(1.0, 1.0),   // Top-right
+            Vec2::new(1.0, -1.0),  // Bottom-right
+            Vec2::new(-1.0, -1.0), // Bottom-left
+            */
+            // For actual sizes (proportional).
+            Vec2::new(-1.0, 1.0),           // Top-left
+            Vec2::new(-1.0 + ox, 1.0),      // Top-right
+            Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
+            Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
+            &gpu_context.wgpu_wrapper.device,
+        );
+        (
+            //
+            bulk_image_size,
+            image_mesh,
+        )
+    };
 
     /*
     // Render Loop
@@ -73,29 +95,30 @@ pub async fn gpu_image_processing(
     }
     */
 
-    let middle_filename = &format!("{}_middle.png", output_filename);
+    let image_bulk_filename = &format!("{}_middle.png", image_output_filename);
     render_full(
-        &gpu_context.wgpu_wrapper,
+        gpu_context,
         &render_pipeline,
-        &quad_material,
-        quad_mesh,
-        safe_filesize,
-        safe_filesize,
-        middle_filename,
+        &image_material,
+        image_mesh,
+        bulk_image_size,
+        bulk_image_size,
+        image_bulk_filename,
     )
     .await;
 
+    // Outside GPU scope
     resize_and_save_image_truncated(
-        Path::new(middle_filename),
-        Path::new(output_filename),
-        quad_material.width,
-        quad_material.height,
+        Path::new(image_bulk_filename),
+        Path::new(image_output_filename),
+        image_material.width,
+        image_material.height,
     )
     .unwrap();
 }
 
 async fn render_full(
-    wgpu_wrapper: &WGPUWrapper,
+    gpu_context: GpuContext,
     render_pipeline: &RenderPipeline,
     quad_material: &Material,
     quad_mesh: Mesh,
@@ -103,6 +126,8 @@ async fn render_full(
     texture_full_height: u32,
     middle_filename: &str,
 ) {
+    let wgpu_wrapper = &gpu_context.wgpu_wrapper;
+
     // Render
     let (
         //

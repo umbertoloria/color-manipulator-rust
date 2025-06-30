@@ -1,4 +1,4 @@
-use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
+use crate::gpu::gpu_context::GpuContext;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::{make_custom_rect, Mesh, Vertex};
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
@@ -9,41 +9,25 @@ use std::fs::remove_file;
 use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Extent3d,
-    IndexFormat, LoadOp, MapMode, Operations, Origin3d, RenderPassColorAttachment,
-    RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
-    TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureUsages,
+    BindGroupLayout, BufferAddress, BufferDescriptor, BufferUsages, Color,
+    CommandEncoderDescriptor, Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
+    TexelCopyBufferLayout, TexelCopyTextureInfo, TextureAspect, TextureDescriptor,
+    TextureDimension, TextureUsages,
 };
 
 pub async fn gpu_image_processing(
-    //
+    gpu_context: &GpuContext,
+    material_bind_group_layout: &BindGroupLayout,
     image_input_filename: &str,
     image_output_filename: &str,
 ) {
-    let gpu_context = create_gpu_context().await;
-
-    // SETUP
-
-    // Bind Group Layout: Texture Material
-    let material_bind_group_layout = gpu_context
-        .create_bind_group_layout()
-        .add_material()
-        .build("Material Bind Group Layout");
-
     // Material: Image (as Texture)
     let image_material = gpu_context.create_material(
         image_input_filename,
         "Image Texture Material",
         &material_bind_group_layout,
     );
-
-    // Render Pipeline
-    let render_pipeline = gpu_context
-        .create_render_pipeline_builder()
-        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
-        .add_vertex_buffer_layout(Vertex::get_layout())
-        .add_bind_group_layout(&material_bind_group_layout)
-        .build("Render Pipeline");
 
     // Quad Mesh
     let (
@@ -82,6 +66,14 @@ pub async fn gpu_image_processing(
         )
     };
 
+    // Render Pipeline
+    let render_pipeline = gpu_context
+        .create_render_pipeline_builder()
+        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
+        .add_vertex_buffer_layout(Vertex::get_layout())
+        .add_bind_group_layout(&material_bind_group_layout)
+        .build("Render Pipeline");
+
     /*
     // Render Loop
     glfw_wrapper.enable_events_polling();
@@ -118,7 +110,7 @@ pub async fn gpu_image_processing(
 
 pub const U32_SIZE: u32 = size_of::<u32>() as u32;
 async fn render_full(
-    gpu_context: GpuContext,
+    gpu_context: &GpuContext,
     render_pipeline: &RenderPipeline,
     quad_material: &Material,
     quad_mesh: Mesh,

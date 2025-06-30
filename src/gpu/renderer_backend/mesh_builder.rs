@@ -138,6 +138,7 @@ pub fn make_custom_rect(
     bottom_left: Vec2,
     gpu_context: &GpuContext,
 ) -> Mesh {
+    // TODO: Create a Shape Builder
     let vertices = [
         Vertex {
             position: Vec3::new(top_left.x, top_left.y, 0.0),

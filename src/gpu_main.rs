@@ -1,57 +1,76 @@
 use crate::folding::{get_path_in, get_path_out_gpu};
+use crate::gpu::gpu_context::create_gpu_context;
 use crate::gpu::gpu_image_processing::gpu_image_processing;
 
 pub async fn gpu_main() {
+    // SETUP
+    let gpu_context = create_gpu_context().await;
+
+    // Bind Group Layout: Texture Material
+    let material_bind_group_layout = gpu_context
+        .create_bind_group_layout()
+        .add_material()
+        .build("Material Bind Group Layout");
+
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20230226_201501.jpg"),
         &get_path_out_gpu("20230226_201501.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20230301_224920.jpg"),
         &get_path_out_gpu("20230301_224920_1.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20230301_224920.jpg"),
         &get_path_out_gpu("20230301_224920_2.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20230301_225057.jpg"),
         &get_path_out_gpu("20230301_225057.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20231002_103537.jpg"),
         &get_path_out_gpu("20231002_103537_1.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20231002_103537.jpg"),
         &get_path_out_gpu("20231002_103537_2.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20231002_103537.jpg"),
         &get_path_out_gpu("20231002_103537_3.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("20240714_1958.png"),
         &get_path_out_gpu("20240714_1958.png"),
     )
     .await;
     gpu_image_processing(
-        //
+        &gpu_context,
+        &material_bind_group_layout,
         &get_path_in("IMG20241009161110.jpg"),
         &get_path_out_gpu("20241009_161110.png"),
     )

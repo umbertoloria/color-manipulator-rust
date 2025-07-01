@@ -1,15 +1,22 @@
-use crate::ffmpeg::ffmpeg::{compute_ffmpeg_extract_frames, FfmpegExtractFramesResult};
+use crate::ffmpeg::ffmpeg::{
+    compute_ffmpeg_compose_video, compute_ffmpeg_extract_frames, FfmpegComposeVideoResult,
+    FfmpegExtractFramesResult,
+};
 use crate::gpu_main::gpu_main;
 use std::env;
 
 const CLI_COMMAND_EXTRACT_FRAMES: &'static str = "ef";
 const CLI_COMMAND_COMPUTE_FRAMES: &'static str = "cf";
+const CLI_COMMAND_COMPOSE_VIDEO: &'static str = "cv";
+
+const FPS: usize = 30;
+
 pub fn cli_init() {
     let args: Vec<String> = env::args().collect();
     // println!("{:?}", args); // Debug only.
 
     if args.len() < 2 {
-        println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}|{CLI_COMMAND_COMPUTE_FRAMES}]");
+        println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}|{CLI_COMMAND_COMPUTE_FRAMES}|{CLI_COMMAND_COMPOSE_VIDEO}]");
         return;
     }
 
@@ -36,7 +43,6 @@ pub fn cli_init() {
             let time_from = &args[4];
             let time_to = &args[5];
             // let fps = &args[5];
-            let fps = 30;
             // TODO: Validate args
 
             // FFMPEG: Extract frames
@@ -45,7 +51,7 @@ pub fn cli_init() {
                 &video_filename,
                 time_from,
                 time_to,
-                &fps,
+                FPS,
             ) {
                 FfmpegExtractFramesResult::AlreadyExtracted(video_file_path) => {
                     println!("Video {}: frames already extracted", video_file_path);
@@ -79,8 +85,36 @@ pub fn cli_init() {
             );
         }
 
+        CLI_COMMAND_COMPOSE_VIDEO => {
+            // Compose Video
+
+            // CLI
+            if args.len() != 5 {
+                println!("Usage: EXEC {CLI_COMMAND_EXTRACT_FRAMES} [frames_dir] [src_video_filename] [out_video_filename]");
+                return;
+            }
+            let frames_dir = &args[2];
+            let src_video_filename = &args[3];
+            let out_video_filename = &args[4];
+            // TODO: Validate args
+
+            // FFMPEG: Extract frames
+            match compute_ffmpeg_compose_video(
+                &frames_dir,
+                FPS,
+                &src_video_filename,
+                &out_video_filename,
+            ) {
+                FfmpegComposeVideoResult::CmdError(cmd_command_output) => {
+                    eprintln!("Failed to execute command");
+                    eprintln!("{:?}", &cmd_command_output);
+                }
+                FfmpegComposeVideoResult::OkComposed => {}
+            }
+        }
+
         &_ => {
-            println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}|{CLI_COMMAND_COMPUTE_FRAMES}]");
+            println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}|{CLI_COMMAND_COMPUTE_FRAMES}|{CLI_COMMAND_COMPOSE_VIDEO}]");
         }
     }
 }

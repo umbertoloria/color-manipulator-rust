@@ -80,6 +80,7 @@ pub fn compute_ffmpeg_compose_video(
         //
         "/C",
         "ffmpeg",
+        "-y", // TODO: Overwriting composed videos by default (ask before)
         "-framerate",
         &format!("{}", frames_fps),
         "-i",

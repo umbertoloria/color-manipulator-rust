@@ -21,7 +21,7 @@ pub async fn gpu_image_processing(
     image_material: &Material,
     image_mesh: &Mesh,
     bulk_image_size: u32,
-    image_output_filename: &str,
+    image_output_filepath: &str,
 ) {
     // Render Pipeline
     let render_pipeline = gpu_context
@@ -43,7 +43,7 @@ pub async fn gpu_image_processing(
     }
     */
 
-    let image_bulk_filename = &format!("{}_bulk.png", image_output_filename);
+    let image_bulk_filepath = &format!("{}_bulk.png", image_output_filepath);
     render_full(
         gpu_context,
         &render_pipeline,
@@ -51,14 +51,14 @@ pub async fn gpu_image_processing(
         image_mesh,
         bulk_image_size,
         bulk_image_size,
-        image_bulk_filename,
+        image_bulk_filepath,
     )
     .await;
 
     // Outside GPU scope
     save_image_output_and_remove_image_bulk(
-        Path::new(image_bulk_filename),
-        Path::new(image_output_filename),
+        Path::new(image_bulk_filepath),
+        Path::new(image_output_filepath),
         image_material.width,
         image_material.height,
     )
@@ -73,7 +73,7 @@ async fn render_full(
     quad_mesh: &Mesh,
     texture_full_width: u32,
     texture_full_height: u32,
-    image_bulk_filename: &str,
+    image_bulk_filepath: &str,
 ) {
     // RENDER
     // Render (1)
@@ -188,7 +188,7 @@ async fn render_full(
         let buffer =
             ImageBuffer::<Rgba<u8>, _>::from_raw(texture_full_width, texture_full_height, data)
                 .unwrap();
-        buffer.save(image_bulk_filename).unwrap();
+        buffer.save(image_bulk_filepath).unwrap();
     }
     output_buffer.unmap();
 

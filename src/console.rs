@@ -1,13 +1,15 @@
 use crate::ffmpeg::ffmpeg::{compute_ffmpeg_extract_frames, FfmpegExtractFramesResult};
+use crate::gpu_main::gpu_main;
 use std::env;
 
 const CLI_COMMAND_EXTRACT_FRAMES: &'static str = "ef";
+const CLI_COMMAND_COMPUTE_FRAMES: &'static str = "cf";
 pub fn cli_init() {
     let args: Vec<String> = env::args().collect();
     // println!("{:?}", args); // Debug only.
 
     if args.len() < 2 {
-        println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}]");
+        println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}|{CLI_COMMAND_COMPUTE_FRAMES}]");
         return;
     }
 
@@ -24,11 +26,11 @@ pub fn cli_init() {
         CLI_COMMAND_EXTRACT_FRAMES => {
             // Extract Frames
 
+            // CLI
             if args.len() != 6 {
                 println!("Usage: EXEC {CLI_COMMAND_EXTRACT_FRAMES} [video_dir] [video_filename] [time_from=00:00:00] [time_to=00:00:00]");
                 return;
             }
-
             let video_dir = &args[2];
             let video_filename = &args[3];
             let time_from = &args[4];
@@ -55,8 +57,30 @@ pub fn cli_init() {
                 FfmpegExtractFramesResult::OkExtract => {}
             }
         }
+
+        CLI_COMMAND_COMPUTE_FRAMES => {
+            // Compute Frames
+
+            // CLI
+            if args.len() != 4 {
+                println!("Usage: EXEC {CLI_COMMAND_COMPUTE_FRAMES} [input_frames_dir] [output_frames_dir]");
+                return;
+            }
+            let input_frames_dir = args[2].as_str();
+            let output_frames_dir = args[3].as_str();
+
+            pollster::block_on(
+                //
+                gpu_main(
+                    //
+                    input_frames_dir,
+                    output_frames_dir,
+                ),
+            );
+        }
+
         &_ => {
-            println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}]");
+            println!("Usage: EXEC [{CLI_COMMAND_EXTRACT_FRAMES}|{CLI_COMMAND_COMPUTE_FRAMES}]");
         }
     }
 }

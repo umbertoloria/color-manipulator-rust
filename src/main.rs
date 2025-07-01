@@ -2,6 +2,7 @@ use crate::console::cli_init;
 
 mod console;
 mod coord;
+mod ffmpeg;
 mod folding;
 mod gpu;
 mod gpu_main;

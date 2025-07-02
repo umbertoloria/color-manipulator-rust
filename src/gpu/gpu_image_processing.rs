@@ -18,7 +18,7 @@ use wgpu::{
 pub async fn gpu_image_processing(
     gpu_context: &GpuContext,
     material_bind_group_layout: &BindGroupLayout,
-    image_material: &Material,
+    image_material: &Material<'_>,
     image_mesh: &Mesh,
     bulk_image_size: u32,
     image_output_filepath: &str,
@@ -59,8 +59,8 @@ pub async fn gpu_image_processing(
     save_image_output_and_remove_image_bulk(
         Path::new(image_bulk_filepath),
         Path::new(image_output_filepath),
-        image_material.width,
-        image_material.height,
+        image_material.width(),
+        image_material.height(),
     )
     .unwrap();
 }
@@ -69,7 +69,7 @@ pub const U32_SIZE: u32 = size_of::<u32>() as u32;
 async fn render_full(
     gpu_context: &GpuContext,
     render_pipeline: &RenderPipeline,
-    quad_material: &Material,
+    quad_material: &Material<'_>,
     quad_mesh: &Mesh,
     texture_full_width: u32,
     texture_full_height: u32,

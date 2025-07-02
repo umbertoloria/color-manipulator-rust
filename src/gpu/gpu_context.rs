@@ -50,12 +50,12 @@ impl GpuContext {
     pub fn create_bind_group_layout_builder(&self) -> BindGroupLayoutBuilder {
         BindGroupLayoutBuilder::new(&self.wgpu_wrapper.device)
     }
-    pub fn create_material(
+    pub fn create_material<'a>(
         &self,
-        image: &RgbaImage,
+        image: &'a RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
-    ) -> Material {
+    ) -> Material<'a> {
         Material::new(
             image,
             label,

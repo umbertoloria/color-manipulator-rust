@@ -226,11 +226,11 @@ pub async fn gpu_main(
 
 fn create_quad_mesh(image_material: &Material, gpu_context: &GpuContext) -> (u32, Mesh) {
     let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let max_size_width_height = image_material.width.max(image_material.height);
+    let max_size_width_height = image_material.width().max(image_material.height());
     let bulk_image_size =
         max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
-    let ox = image_material.width as f32 / bulk_image_size as f32 * 2.0;
-    let oy = image_material.height as f32 / bulk_image_size as f32 * 2.0;
+    let ox = image_material.width() as f32 / bulk_image_size as f32 * 2.0;
+    let oy = image_material.height() as f32 / bulk_image_size as f32 * 2.0;
     let image_mesh = gpu_context
         .create_shape_builder()
         .use_custom_rect(

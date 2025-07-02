@@ -8,14 +8,13 @@ use wgpu::{
     TextureDescriptor, TextureDimension, TextureUsages,
 };
 
-pub struct Material {
-    pub width: u32,
-    pub height: u32,
+pub struct Material<'a> {
+    pub image: &'a RgbaImage,
     pub bind_group: BindGroup,
 }
-impl Material {
+impl<'a> Material<'a> {
     pub fn new(
-        image: &RgbaImage,
+        image: &'a RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
         device: &Device,
@@ -77,9 +76,15 @@ impl Material {
             .build(label);
 
         Self {
-            width,
-            height,
+            //
+            image,
             bind_group,
         }
+    }
+    pub fn width(&self) -> u32 {
+        self.image.width()
+    }
+    pub fn height(&self) -> u32 {
+        self.image.height()
     }
 }

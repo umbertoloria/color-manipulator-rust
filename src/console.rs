@@ -12,6 +12,11 @@ const CLI_COMMAND_COMPOSE_VIDEO: &'static str = "cv";
 const FPS: usize = 30;
 
 pub fn cli_init() {
+    // Examples:
+    //  => cargo run --release ef ./video_project video.mkv 00:05:55 00:06:02
+    //  => cargo run --release cf ./video_project ./video_project/result
+    //  => cargo run --release cv ./video_project/result video.mkv output.mp4
+
     let args: Vec<String> = env::args().collect();
     // println!("{:?}", args); // Debug only.
 

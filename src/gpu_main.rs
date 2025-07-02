@@ -1,8 +1,4 @@
-use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
-use crate::gpu::gpu_image_processing::gpu_image_processing;
-use crate::gpu::renderer_backend::material::Material;
-use crate::gpu::renderer_backend::mesh_builder::Mesh;
-use glm::Vec2;
+use crate::image_processing::image_processing::{image_processing_compute, ImageProcessingRequest};
 use image::load_from_memory;
 use std::fs::{read, read_dir};
 use std::path::{Path, PathBuf};
@@ -14,10 +10,10 @@ pub async fn gpu_main(
     output_frames_dir: &str,
 ) {
     // Frames loading
+    let mut requests: Vec<ImageProcessingRequest> = Vec::new();
     let frame_paths = get_png_files_in_folder(input_frames_dir).unwrap();
     println!("Loading {} frames", frame_paths.len());
     let mut dimensions: Option<(u32, u32)> = None;
-    let mut files = Vec::new();
     for frame_path_buf in &frame_paths {
         let frame_path = frame_path_buf.as_path();
 
@@ -38,55 +34,16 @@ pub async fn gpu_main(
         let frame_file_name = frame_path.file_name().unwrap().to_str().unwrap();
         let output_frame_filepath = format!("{}/{}", output_frames_dir, frame_file_name);
 
-        files.push((frame_image, output_frame_filepath));
+        requests.push(
+            //
+            ImageProcessingRequest {
+                image: frame_image,
+                image_output_filepath: output_frame_filepath,
+            },
+        );
     }
 
-    // GPU SETUP
-    let gpu_context = create_gpu_context().await;
-
-    // Bind Group Layout: Texture Material
-    let material_bind_group_layout = gpu_context
-        .create_bind_group_layout_builder()
-        .add_material()
-        .build("Material Bind Group Layout");
-
-    // Frames: compute
-    for (frame_image, output_frame_filepath) in &files {
-        // Frame as Texture
-        let material_image_input =
-            gpu_context.create_material(frame_image, "Frame image", &material_bind_group_layout);
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-
-        // GPU Image Processing
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            output_frame_filepath,
-        )
-        .await;
-    }
-}
-
-fn create_quad_mesh(image_material: &Material, gpu_context: &GpuContext) -> (u32, Mesh) {
-    let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let max_size_width_height = image_material.width().max(image_material.height());
-    let bulk_image_size =
-        max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
-    let ox = image_material.width() as f32 / bulk_image_size as f32 * 2.0;
-    let oy = image_material.height() as f32 / bulk_image_size as f32 * 2.0;
-    let image_mesh = gpu_context
-        .create_shape_builder()
-        .use_custom_rect(
-            Vec2::new(-1.0, 1.0),           // Top-left
-            Vec2::new(-1.0 + ox, 1.0),      // Top-right
-            Vec2::new(-1.0 + ox, 1.0 - oy), // Bottom-right
-            Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
-        )
-        .build();
-    (bulk_image_size, image_mesh)
+    image_processing_compute(&mut requests).await;
 }
 
 pub fn get_png_files_in_folder(folder_path: &str) -> std::io::Result<Vec<PathBuf>> {

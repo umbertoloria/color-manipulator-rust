@@ -6,6 +6,7 @@ mod ffmpeg;
 mod folding;
 mod gpu;
 mod gpu_main;
+mod image_processing;
 mod int;
 mod projects;
 

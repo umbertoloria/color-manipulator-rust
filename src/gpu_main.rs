@@ -3,8 +3,10 @@ use crate::gpu::gpu_image_processing::gpu_image_processing;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::Mesh;
 use glm::Vec2;
+use image::load_from_memory;
 use std::fs::{read, read_dir};
 use std::path::{Path, PathBuf};
+use std::process::exit;
 
 pub async fn gpu_main(
     //
@@ -13,17 +15,33 @@ pub async fn gpu_main(
 ) {
     // Frames loading
     let frame_files = get_png_files_in_folder(input_frames_dir).unwrap();
-    println!("Found {} frames", frame_files.len());
+    println!("Loading {} frames", frame_files.len());
+    let mut dimensions: Option<(u32, u32)> = None;
     let mut files = Vec::new();
     for frame_file in &frame_files {
         let frame_file_path = frame_file.as_path();
         let frame_file_name = frame_file_path.file_name().unwrap().to_str().unwrap();
+
         let frame_file_bytes = read(frame_file_path).unwrap();
+        let frame_file_image = load_from_memory(&frame_file_bytes).unwrap();
+        let frame_file_image = frame_file_image.to_rgba8();
+        let width = frame_file_image.width();
+        let height = frame_file_image.height();
+
+        if let Some(dimensions) = dimensions {
+            if dimensions.0 != width || dimensions.1 != height {
+                eprintln!("Frame images don't have the same dimensions");
+                exit(0x0100);
+            }
+        } else {
+            dimensions = Some((width, height));
+        }
+
         files.push((
             //
             frame_file_path,
             frame_file_name,
-            frame_file_bytes,
+            frame_file_image,
         ));
     }
 
@@ -37,10 +55,13 @@ pub async fn gpu_main(
         .build("Material Bind Group Layout");
 
     // Frames: compute
-    for (_, frame_file_name, frame_file_bytes) in &files {
+    for (_, frame_file_name, frame_file_image) in &files {
         // Frame as Texture
-        let material_image_input =
-            gpu_context.create_material(&frame_file_bytes, "Frame", &material_bind_group_layout);
+        let material_image_input = gpu_context.create_material(
+            frame_file_image,
+            "Frame image",
+            &material_bind_group_layout,
+        );
         let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
 
         // Output frame file path

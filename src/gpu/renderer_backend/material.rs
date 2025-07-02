@@ -1,6 +1,6 @@
 use crate::gpu::renderer_backend::bind_group::BindGroupBuilder;
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
-use image::GenericImageView;
+use image::RgbaImage;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     AddressMode, BindGroup, BindGroupLayout, Device, Extent3d, FilterMode, Origin3d, Queue,
@@ -15,16 +15,14 @@ pub struct Material {
 }
 impl Material {
     pub fn new(
-        bytes: &Vec<u8>,
+        image: &RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
         device: &Device,
         queue: &Queue,
     ) -> Self {
-        let loaded_image = image::load_from_memory(&bytes).unwrap();
-        let converted = loaded_image.to_rgba8();
-        let (width, height) = loaded_image.dimensions();
-        // println!("Image size: {} x {}", width, height);
+        let width = image.width();
+        let height = image.height();
 
         let texture_size = Extent3d {
             width,
@@ -51,7 +49,7 @@ impl Material {
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
             },
-            &converted,
+            &image,
             TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(width * 4),

@@ -3,6 +3,7 @@ use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
 use crate::gpu::renderer_backend::shape::ShapeBuilder;
 use crate::gpu::wgpu::WGPUWrapper;
+use image::RgbaImage;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
     BindGroupLayout, Buffer, BufferDescriptor, CommandBuffer, CommandEncoder,
@@ -51,12 +52,12 @@ impl GpuContext {
     }
     pub fn create_material(
         &self,
-        bytes: &Vec<u8>,
+        image: &RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
     ) -> Material {
         Material::new(
-            bytes,
+            image,
             label,
             &bind_group_layout,
             &self.wgpu_wrapper.device,

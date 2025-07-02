@@ -14,19 +14,17 @@ pub async fn gpu_main(
     output_frames_dir: &str,
 ) {
     // Frames loading
-    let frame_files = get_png_files_in_folder(input_frames_dir).unwrap();
-    println!("Loading {} frames", frame_files.len());
+    let frame_paths = get_png_files_in_folder(input_frames_dir).unwrap();
+    println!("Loading {} frames", frame_paths.len());
     let mut dimensions: Option<(u32, u32)> = None;
     let mut files = Vec::new();
-    for frame_file in &frame_files {
-        let frame_file_path = frame_file.as_path();
-        let frame_file_name = frame_file_path.file_name().unwrap().to_str().unwrap();
+    for frame_path_buf in &frame_paths {
+        let frame_path = frame_path_buf.as_path();
 
-        let frame_file_bytes = read(frame_file_path).unwrap();
-        let frame_file_image = load_from_memory(&frame_file_bytes).unwrap();
-        let frame_file_image = frame_file_image.to_rgba8();
-        let width = frame_file_image.width();
-        let height = frame_file_image.height();
+        let frame_bytes = read(frame_path).unwrap();
+        let frame_image = load_from_memory(&frame_bytes).unwrap().to_rgba8();
+        let width = frame_image.width();
+        let height = frame_image.height();
 
         if let Some(dimensions) = dimensions {
             if dimensions.0 != width || dimensions.1 != height {
@@ -37,12 +35,10 @@ pub async fn gpu_main(
             dimensions = Some((width, height));
         }
 
-        files.push((
-            //
-            frame_file_path,
-            frame_file_name,
-            frame_file_image,
-        ));
+        let frame_file_name = frame_path.file_name().unwrap().to_str().unwrap();
+        let output_frame_filepath = format!("{}/{}", output_frames_dir, frame_file_name);
+
+        files.push((frame_image, output_frame_filepath));
     }
 
     // GPU SETUP
@@ -55,17 +51,11 @@ pub async fn gpu_main(
         .build("Material Bind Group Layout");
 
     // Frames: compute
-    for (_, frame_file_name, frame_file_image) in &files {
+    for (frame_image, output_frame_filepath) in &files {
         // Frame as Texture
-        let material_image_input = gpu_context.create_material(
-            frame_file_image,
-            "Frame image",
-            &material_bind_group_layout,
-        );
+        let material_image_input =
+            gpu_context.create_material(frame_image, "Frame image", &material_bind_group_layout);
         let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-
-        // Output frame file path
-        let image_output_filepath = &format!("{}/{}", output_frames_dir, frame_file_name);
 
         // GPU Image Processing
         gpu_image_processing(
@@ -74,154 +64,10 @@ pub async fn gpu_main(
             &material_image_input,
             &image_mesh,
             bulk_image_size,
-            image_output_filepath,
+            output_frame_filepath,
         )
         .await;
     }
-
-    /*
-    {
-        let material_image_input = gpu_context.create_material(
-            &read(make_safe_filepath(&get_path_in("20230226_201501.jpg"))).unwrap(),
-            "20230226_201501",
-            &material_bind_group_layout,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20230226_201501.png"),
-        )
-        .await;
-    }
-
-    {
-        let material_image_input = gpu_context.create_material(
-            &read(make_safe_filepath(&get_path_in("20230301_224920.jpg"))).unwrap(),
-            "20230301_224920",
-            &material_bind_group_layout,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20230301_224920_1.png"),
-        )
-        .await;
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20230301_224920_2.png"),
-        )
-        .await;
-    }
-
-    {
-        let material_image_input = gpu_context.create_material(
-            &read(make_safe_filepath(&get_path_in("20230301_225057.jpg"))).unwrap(),
-            "20230301_225057",
-            &material_bind_group_layout,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20230301_225057.png"),
-        )
-        .await;
-    }
-
-    {
-        let material_image_input = gpu_context.create_material(
-            &read(make_safe_filepath(&get_path_in("20231002_103537.jpg"))).unwrap(),
-            "20231002_103537",
-            &material_bind_group_layout,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20231002_103537_1.png"),
-        )
-        .await;
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20231002_103537_2.png"),
-        )
-        .await;
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20231002_103537_3.png"),
-        )
-        .await;
-    }
-
-    {
-        let material_image_input = gpu_context.create_material(
-            &read(make_safe_filepath(&get_path_in("20240714_1958.png"))).unwrap(),
-            "20240714_1958",
-            &material_bind_group_layout,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20240714_1958.png"),
-        )
-        .await;
-    }
-
-    {
-        let material_image_input = gpu_context.create_material(
-            &read(make_safe_filepath(&get_path_in("IMG20241009161110.jpg"))).unwrap(),
-            "20241009161110",
-            &material_bind_group_layout,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
-        gpu_image_processing(
-            &gpu_context,
-            &material_bind_group_layout,
-            &material_image_input,
-            &image_mesh,
-            bulk_image_size,
-            &get_path_out_gpu("20241009_161110.png"),
-        )
-        .await;
-    }
-    */
-
-    /*create_and_save_int_diff_image_from_paths(
-        //
-        GPU_INPUT_FILENAME,
-        GPU_FINAL_FILENAME,
-        GPU_DIFF_FILENAME,
-    );*/
 }
 
 fn create_quad_mesh(image_material: &Material, gpu_context: &GpuContext) -> (u32, Mesh) {
@@ -244,7 +90,7 @@ fn create_quad_mesh(image_material: &Material, gpu_context: &GpuContext) -> (u32
 }
 
 pub fn get_png_files_in_folder(folder_path: &str) -> std::io::Result<Vec<PathBuf>> {
-    let mut png_files = Vec::new();
+    let mut png_files_path_bufs = Vec::new();
     let path = Path::new(folder_path);
 
     // Check if the path exists and is a directory
@@ -257,16 +103,16 @@ pub fn get_png_files_in_folder(folder_path: &str) -> std::io::Result<Vec<PathBuf
 
     for entry in read_dir(path)? {
         let entry = entry?;
-        let path = entry.path();
+        let path_buf = entry.path();
 
         // Check if it's a file and has a .png extension
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
+        if path_buf.is_file() {
+            if let Some(extension) = path_buf.extension() {
                 if extension == "png" {
-                    png_files.push(path);
+                    png_files_path_bufs.push(path_buf);
                 }
             }
         }
     }
-    Ok(png_files)
+    Ok(png_files_path_bufs)
 }

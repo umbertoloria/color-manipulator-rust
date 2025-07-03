@@ -4,12 +4,15 @@ use image::RgbaImage;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
     AddressMode, BindGroup, BindGroupLayout, Device, Extent3d, FilterMode, Origin3d, Queue,
-    SamplerDescriptor, TexelCopyBufferLayout, TexelCopyTextureInfo, TextureAspect,
-    TextureDescriptor, TextureDimension, TextureUsages,
+    Sampler, SamplerDescriptor, TexelCopyBufferLayout, TexelCopyTextureInfo, Texture,
+    TextureAspect, TextureDescriptor, TextureDimension, TextureUsages, TextureView,
 };
 
 pub struct Material<'a> {
     pub image: &'a RgbaImage,
+    pub texture: Texture,
+    pub texture_view: TextureView,
+    pub sampler: Sampler,
     pub bind_group: BindGroup,
 }
 impl<'a> Material<'a> {
@@ -57,7 +60,7 @@ impl<'a> Material<'a> {
             texture_size,
         );
 
-        let view = texture.create_view(&TextureViewDescriptor::default());
+        let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
         let sampler_descriptor = SamplerDescriptor {
             address_mode_u: AddressMode::Repeat,
@@ -72,12 +75,15 @@ impl<'a> Material<'a> {
 
         let bind_group = BindGroupBuilder::new(device)
             .set_layout(bind_group_layout)
-            .add_material(&view, &sampler)
+            .add_material(&texture_view, &sampler)
             .build(label);
 
         Self {
             //
             image,
+            texture,
+            texture_view,
+            sampler,
             bind_group,
         }
     }

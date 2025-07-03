@@ -9,7 +9,7 @@ const CLI_COMMAND_EXTRACT_FRAMES: &'static str = "ef";
 const CLI_COMMAND_COMPUTE_FRAMES: &'static str = "cf";
 const CLI_COMMAND_COMPOSE_VIDEO: &'static str = "cv";
 
-const FPS: usize = 30;
+pub const FPS: usize = 30;
 
 pub fn cli_init() {
     // Examples:
@@ -84,8 +84,8 @@ pub fn cli_init() {
                 //
                 gpu_main(
                     //
-                    input_frames_dir,
-                    output_frames_dir,
+                    input_frames_dir.into(),
+                    output_frames_dir.into(),
                 ),
             );
         }

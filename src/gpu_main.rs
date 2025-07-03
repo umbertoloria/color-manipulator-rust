@@ -1,49 +1,69 @@
 use crate::image_processing::image_processing::{image_processing_compute, ImageProcessingRequest};
 use image::load_from_memory;
+use std::collections::VecDeque;
 use std::fs::{read, read_dir};
 use std::path::{Path, PathBuf};
 use std::process::exit;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 pub async fn gpu_main(
     //
-    input_frames_dir: &str,
-    output_frames_dir: &str,
+    input_frames_dir: String,
+    output_frames_dir: String,
 ) {
-    // Frames loading
-    let mut requests: Vec<ImageProcessingRequest> = Vec::new();
-    let frame_paths = get_png_files_in_folder(input_frames_dir).unwrap();
-    println!("Loading {} frames", frame_paths.len());
-    let mut dimensions: Option<(u32, u32)> = None;
-    for frame_path_buf in &frame_paths {
-        let frame_path = frame_path_buf.as_path();
+    let frame_paths = get_png_file_paths_in_folder(&input_frames_dir).unwrap();
 
-        let frame_bytes = read(frame_path).unwrap();
-        let frame_image = load_from_memory(&frame_bytes).unwrap().to_rgba8();
-        let width = frame_image.width();
-        let height = frame_image.height();
+    let first_frame_path = &frame_paths[0];
+    let frame_bytes = read(first_frame_path).unwrap();
+    let frame_image = load_from_memory(&frame_bytes).unwrap().to_rgba8();
+    let width = frame_image.width();
+    let height = frame_image.height();
 
-        if let Some(dimensions) = dimensions {
-            if dimensions.0 != width || dimensions.1 != height {
-                eprintln!("Frame images don't have the same dimensions");
-                exit(0x0100);
+    let shared_queue: Arc<Mutex<VecDeque<ImageProcessingRequest>>> =
+        Arc::new(Mutex::new(VecDeque::new()));
+
+    let producer_queue = Arc::clone(&shared_queue);
+    let producer_handle = thread::spawn(move || {
+        // Frames loading
+        println!("Loading {} frames", frame_paths.len());
+        let mut dimensions: Option<(u32, u32)> = None;
+        for frame_path_buf in &frame_paths {
+            let frame_path = frame_path_buf.as_path();
+
+            let frame_bytes = read(frame_path).unwrap();
+            let frame_image = load_from_memory(&frame_bytes).unwrap().to_rgba8();
+            let width = frame_image.width();
+            let height = frame_image.height();
+
+            if let Some(dimensions) = dimensions {
+                if dimensions.0 != width || dimensions.1 != height {
+                    eprintln!("Frame images don't have the same dimensions");
+                    exit(0x0100);
+                }
+            } else {
+                dimensions = Some((width, height));
             }
-        } else {
-            dimensions = Some((width, height));
+
+            let frame_file_name = frame_path.file_name().unwrap().to_str().unwrap();
+            let output_frame_filepath = format!("{}/{}", output_frames_dir, frame_file_name);
+
+            {
+                let mut queue = producer_queue.lock().unwrap();
+                queue.push_back(
+                    //
+                    ImageProcessingRequest {
+                        image: frame_image,
+                        image_output_filepath: output_frame_filepath,
+                    },
+                );
+            }
         }
+    });
 
-        let frame_file_name = frame_path.file_name().unwrap().to_str().unwrap();
-        let output_frame_filepath = format!("{}/{}", output_frames_dir, frame_file_name);
-
-        requests.push(
-            //
-            ImageProcessingRequest {
-                image: frame_image,
-                image_output_filepath: output_frame_filepath,
-            },
-        );
-    }
-
-    let image_processing_results = image_processing_compute(&mut requests).await;
+    let consumer_queue = Arc::clone(&shared_queue);
+    let image_processing_results =
+        image_processing_compute(consumer_queue, width, height, producer_handle).await;
     println!(" -> Num of frames: {}", image_processing_results.frames);
     println!(" -> Average FPS  : {}", image_processing_results.avg_fps);
     println!(
@@ -52,7 +72,7 @@ pub async fn gpu_main(
     );
 }
 
-pub fn get_png_files_in_folder(folder_path: &str) -> std::io::Result<Vec<PathBuf>> {
+pub fn get_png_file_paths_in_folder(folder_path: &str) -> std::io::Result<Vec<PathBuf>> {
     let mut png_files_path_bufs = Vec::new();
     let path = Path::new(folder_path);
 

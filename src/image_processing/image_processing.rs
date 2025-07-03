@@ -1,11 +1,15 @@
+use crate::console::FPS;
 use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
 use crate::gpu::renderer_backend::mesh_builder::{Mesh, Vertex};
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use glm::Vec2;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba, RgbaImage};
+use std::collections::VecDeque;
 use std::error::Error;
 use std::fs::remove_file;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
@@ -26,7 +30,10 @@ pub struct ImageProcessingResults {
 }
 const U32_SIZE: u32 = size_of::<u32>() as u32;
 pub async fn image_processing_compute(
-    requests: &Vec<ImageProcessingRequest>,
+    queue: Arc<Mutex<VecDeque<ImageProcessingRequest>>>,
+    reference_image_width: u32,
+    reference_image_height: u32,
+    producer_handle: JoinHandle<()>,
 ) -> ImageProcessingResults {
     // NOTE: Assuming all images from "requests" have the same size.
 
@@ -35,6 +42,7 @@ pub async fn image_processing_compute(
 
     // Benchmark
     let before = Instant::now();
+    let mut num_frames = 0;
 
     // GPU COMPUTE
     let material_bind_group_layout = gpu_context
@@ -48,46 +56,56 @@ pub async fn image_processing_compute(
         .add_bind_group_layout(&material_bind_group_layout)
         .build("Render Pipeline");
 
-    let reference_image = &requests[0].image;
-    let reference_image_width = reference_image.width();
-    let reference_image_height = reference_image.height();
-
     let sampler = gpu_context.create_sampler();
-    let mut material_image_input = gpu_context.create_material(
-        reference_image,
-        "Frame image",
-        &material_bind_group_layout,
-        &sampler,
-    );
-    let (bulk_image_size, image_mesh) = create_quad_mesh_with_bulk_dimensions(
-        reference_image_width,
-        reference_image_height,
-        &gpu_context,
-    );
-    let bulk_image_size_width = bulk_image_size;
-    let bulk_image_size_height = bulk_image_size;
 
-    // Texture View: render on Image.
-    let texture = gpu_context.create_texture(&TextureDescriptor {
-        label: Some("Output texture"),
-        size: Extent3d {
-            width: bulk_image_size_width,
-            height: bulk_image_size_height,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: TextureDimension::D2,
-        format: USED_PIXEL_FORMAT,
-        usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
-        view_formats: &[USED_PIXEL_FORMAT],
-    });
-    let texture_view = texture.create_view(&TextureViewDescriptor::default());
-
-    let mut deferred_output_buffer_pool = DeferredOutputBufferPool::new(5);
+    let mut deferred_output_buffer_pool = DeferredOutputBufferPool::new(FPS);
     let mut deferred_resize_bulk_file_list = Vec::new();
 
-    for request in requests {
+    loop {
+        let option_request = {
+            let mut queue = queue.lock().unwrap();
+            queue.pop_front()
+        };
+        if option_request.is_none() {
+            if producer_handle.is_finished() {
+                break;
+            } else {
+                continue;
+            }
+        }
+        let request = option_request.unwrap();
+        let reference_image = &request.image;
+        let mut material_image_input = gpu_context.create_material(
+            reference_image,
+            "Frame image",
+            &material_bind_group_layout,
+            &sampler,
+        );
+        let (bulk_image_size, image_mesh) = create_quad_mesh_with_bulk_dimensions(
+            reference_image_width,
+            reference_image_height,
+            &gpu_context,
+        );
+        let bulk_image_size_width = bulk_image_size;
+        let bulk_image_size_height = bulk_image_size;
+
+        // Texture View: render on Image.
+        let texture = gpu_context.create_texture(&TextureDescriptor {
+            label: Some("Output texture"),
+            size: Extent3d {
+                width: bulk_image_size_width,
+                height: bulk_image_size_height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: USED_PIXEL_FORMAT,
+            usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[USED_PIXEL_FORMAT],
+        });
+        let texture_view = texture.create_view(&TextureViewDescriptor::default());
+
         material_image_input.change_image(&request.image).unwrap();
 
         /*
@@ -206,6 +224,8 @@ pub async fn image_processing_compute(
             image_bulk_filepath,
             image_output_filepath: request.image_output_filepath.clone(),
         });
+
+        num_frames += 1;
     }
 
     // Benchmark
@@ -223,9 +243,9 @@ pub async fn image_processing_compute(
     }
 
     // RESULTS
-    let avg_fps = (requests.len() as f32 / duration.as_secs_f32()) as usize;
+    let avg_fps = (num_frames as f32 / duration.as_secs_f32()) as usize;
     ImageProcessingResults {
-        frames: requests.len(),
+        frames: num_frames,
         avg_fps,
         duration,
     }

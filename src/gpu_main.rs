@@ -26,16 +26,17 @@ pub async fn gpu_main(
     let producer_queue = Arc::clone(&shared_queue);
     let producer_handle = thread::spawn(move || {
         // Frames loading
-        println!("Loading {} frames", frame_paths.len());
         let mut dimensions: Option<(u32, u32)> = None;
         for frame_path_buf in &frame_paths {
             let frame_path = frame_path_buf.as_path();
 
+            // Image load
             let frame_bytes = read(frame_path).unwrap();
             let frame_image = load_from_memory(&frame_bytes).unwrap().to_rgba8();
+
+            // Check for same dimensions
             let width = frame_image.width();
             let height = frame_image.height();
-
             if let Some(dimensions) = dimensions {
                 if dimensions.0 != width || dimensions.1 != height {
                     eprintln!("Frame images don't have the same dimensions");
@@ -45,16 +46,19 @@ pub async fn gpu_main(
                 dimensions = Some((width, height));
             }
 
-            let frame_file_name = frame_path.file_name().unwrap().to_str().unwrap();
-            let output_frame_filepath = format!("{}/{}", output_frames_dir, frame_file_name);
-
+            let frame_file_name = frame_path
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
             {
                 let mut queue = producer_queue.lock().unwrap();
                 queue.push_back(
                     //
                     ImageProcessingRequest {
                         image: frame_image,
-                        image_output_filepath: output_frame_filepath,
+                        image_file_name: frame_file_name,
                     },
                 );
             }
@@ -62,8 +66,14 @@ pub async fn gpu_main(
     });
 
     let consumer_queue = Arc::clone(&shared_queue);
-    let image_processing_results =
-        image_processing_compute(consumer_queue, width, height, producer_handle).await;
+    let image_processing_results = image_processing_compute(
+        consumer_queue,
+        output_frames_dir,
+        width,
+        height,
+        producer_handle,
+    )
+    .await;
     println!(" -> Num of frames: {}", image_processing_results.frames);
     println!(" -> Average FPS  : {}", image_processing_results.avg_fps);
     println!(

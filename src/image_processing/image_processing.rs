@@ -1,4 +1,3 @@
-use crate::console::FPS;
 use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
 use crate::gpu::renderer_backend::mesh_builder::{Mesh, Vertex};
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
@@ -21,7 +20,7 @@ use wgpu::{
 
 pub struct ImageProcessingRequest {
     pub image: RgbaImage,
-    pub image_output_filepath: String,
+    pub image_file_name: String,
 }
 pub struct ImageProcessingResults {
     pub frames: usize,
@@ -31,6 +30,7 @@ pub struct ImageProcessingResults {
 const U32_SIZE: u32 = size_of::<u32>() as u32;
 pub async fn image_processing_compute(
     queue: Arc<Mutex<VecDeque<ImageProcessingRequest>>>,
+    output_frames_dir: String,
     reference_image_width: u32,
     reference_image_height: u32,
     producer_handle: JoinHandle<()>,
@@ -58,7 +58,7 @@ pub async fn image_processing_compute(
 
     let sampler = gpu_context.create_sampler();
 
-    let mut deferred_output_buffer_pool = DeferredOutputBufferPool::new(FPS);
+    let mut deferred_output_buffer_pool = DeferredOutputBufferPool::new(1);
     let mut deferred_resize_bulk_file_list = Vec::new();
 
     loop {
@@ -202,7 +202,8 @@ pub async fn image_processing_compute(
         // Render (3)
 
         // Save Texture on an Image.
-        let image_bulk_filepath = format!("{}_bulk.png", request.image_output_filepath);
+        let image_output_filepath = format!("{}/{}", output_frames_dir, request.image_file_name);
+        let image_bulk_filepath = format!("{}_bulk.png", image_output_filepath);
         println!("Deferring bulk image paint \"{}\"", image_bulk_filepath);
         let deferred_output_buffer = DeferredOutputBuffer {
             output_buffer,
@@ -222,7 +223,7 @@ pub async fn image_processing_compute(
         // Outside GPU scope
         deferred_resize_bulk_file_list.push(DeferredResizeBulkFile {
             image_bulk_filepath,
-            image_output_filepath: request.image_output_filepath.clone(),
+            image_output_filepath,
         });
 
         num_frames += 1;

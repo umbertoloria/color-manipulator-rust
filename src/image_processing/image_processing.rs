@@ -66,6 +66,32 @@ pub async fn image_processing_compute(
     );
     let bulk_image_size_width = bulk_image_size;
     let bulk_image_size_height = bulk_image_size;
+
+    // Output Buffer
+    let output_buffer = gpu_context.create_buffer(&BufferDescriptor {
+        label: None,
+        size: (U32_SIZE * bulk_image_size_width * bulk_image_size_height) as BufferAddress,
+        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+
+    // Texture View: render on Image.
+    let texture = gpu_context.create_texture(&TextureDescriptor {
+        label: Some("Output texture"),
+        size: Extent3d {
+            width: bulk_image_size_width,
+            height: bulk_image_size_height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: TextureDimension::D2,
+        format: USED_PIXEL_FORMAT,
+        usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[USED_PIXEL_FORMAT],
+    });
+    let texture_view = texture.create_view(&TextureViewDescriptor::default());
+
     for request in requests {
         material_image_input.change_image(&request.image).unwrap();
 
@@ -93,31 +119,6 @@ pub async fn image_processing_compute(
             .texture
             .create_view(&TextureViewDescriptor::default());
         */
-
-        // Output Buffer
-        let output_buffer = gpu_context.create_buffer(&BufferDescriptor {
-            label: None,
-            size: (U32_SIZE * bulk_image_size_width * bulk_image_size_height) as BufferAddress,
-            usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
-
-        // Texture View: render on Image.
-        let texture = gpu_context.create_texture(&TextureDescriptor {
-            label: Some("Output texture"),
-            size: Extent3d {
-                width: bulk_image_size_width,
-                height: bulk_image_size_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: USED_PIXEL_FORMAT,
-            usage: TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[USED_PIXEL_FORMAT],
-        });
-        let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
         // Render (2)
         // Command Encoder

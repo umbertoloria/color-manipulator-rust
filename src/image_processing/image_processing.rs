@@ -84,6 +84,7 @@ pub async fn image_processing_compute(
     });
     let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
+    let mut deferred_output_buffer_pool = DeferredOutputBufferPool::new(5);
     let mut deferred_resize_bulk_file_list = Vec::new();
 
     for request in requests {
@@ -184,13 +185,16 @@ pub async fn image_processing_compute(
 
         // Save Texture on an Image.
         let image_bulk_filepath = format!("{}_bulk.png", request.image_output_filepath);
+        println!("Deferring bulk image paint \"{}\"", image_bulk_filepath);
         let deferred_output_buffer = DeferredOutputBuffer {
             output_buffer,
             bulk_image_size_width,
             bulk_image_size_height,
-            image_bulk_filepath,
+            image_bulk_filepath: image_bulk_filepath.clone(),
         };
-        deferred_output_buffer.write_on_file(&gpu_context).await;
+        deferred_output_buffer_pool
+            .add(deferred_output_buffer, &gpu_context)
+            .await;
 
         // Draw on a Window.
         /*
@@ -199,7 +203,7 @@ pub async fn image_processing_compute(
 
         // Outside GPU scope
         deferred_resize_bulk_file_list.push(DeferredResizeBulkFile {
-            image_bulk_filepath: deferred_output_buffer.image_bulk_filepath,
+            image_bulk_filepath,
             image_output_filepath: request.image_output_filepath.clone(),
         });
     }
@@ -207,6 +211,9 @@ pub async fn image_processing_compute(
     // Benchmark
     let after = Instant::now();
     let duration = after - before;
+
+    // Saving bulk images
+    deferred_output_buffer_pool.write_files(&gpu_context).await;
 
     // Resizing bulk images
     println!("Resizing bulk images");
@@ -250,6 +257,34 @@ fn create_quad_mesh_with_bulk_dimensions(
     (bulk_image_size, image_mesh)
 }
 
+struct DeferredOutputBufferPool {
+    max_size: usize,
+    list: Vec<DeferredOutputBuffer>,
+}
+impl DeferredOutputBufferPool {
+    pub fn new(max_size: usize) -> Self {
+        Self {
+            max_size,
+            list: Vec::new(),
+        }
+    }
+    pub async fn add(
+        &mut self,
+        deferred_output_buffer: DeferredOutputBuffer,
+        gpu_context: &GpuContext,
+    ) {
+        self.list.push(deferred_output_buffer);
+        if self.list.len() >= self.max_size {
+            self.write_files(gpu_context).await;
+        }
+    }
+    pub async fn write_files(&mut self, gpu_context: &GpuContext) {
+        for deferred_output_buffer in &self.list {
+            deferred_output_buffer.write_on_file(&gpu_context).await;
+        }
+        self.list.clear();
+    }
+}
 struct DeferredOutputBuffer {
     output_buffer: Buffer,
     bulk_image_size_width: u32,

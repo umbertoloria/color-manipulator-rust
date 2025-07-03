@@ -18,10 +18,10 @@ pub const U32_SIZE: u32 = size_of::<u32>() as u32;
 pub async fn render_full(
     gpu_context: &GpuContext,
     render_pipeline: &RenderPipeline,
-    quad_material: &Material<'_>,
-    quad_mesh: &Mesh,
-    texture_full_width: u32,
-    texture_full_height: u32,
+    material_image_input: &Material<'_>,
+    image_mesh: &Mesh,
+    bulk_image_size_width: u32,
+    bulk_image_size_height: u32,
     image_bulk_filepath: &str,
 ) {
     // RENDER
@@ -34,12 +34,20 @@ pub async fn render_full(
         .create_view(&TextureViewDescriptor::default());
     */
 
+    // Output Buffer
+    let output_buffer = gpu_context.create_buffer(&BufferDescriptor {
+        label: None,
+        size: (U32_SIZE * bulk_image_size_width * bulk_image_size_height) as BufferAddress,
+        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+
     // Texture View: render on Image.
     let texture = gpu_context.create_texture(&TextureDescriptor {
         label: Some("Output texture"),
         size: Extent3d {
-            width: texture_full_width,
-            height: texture_full_height,
+            width: bulk_image_size_width,
+            height: bulk_image_size_height,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
@@ -50,13 +58,6 @@ pub async fn render_full(
         view_formats: &[USED_PIXEL_FORMAT],
     });
     let texture_view = texture.create_view(&TextureViewDescriptor::default());
-    let output_buffer_desc = BufferDescriptor {
-        label: None,
-        size: (U32_SIZE * texture_full_width * texture_full_height) as BufferAddress,
-        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    };
-    let output_buffer = gpu_context.create_buffer(&output_buffer_desc);
 
     // Render (2)
     // Command Encoder
@@ -87,10 +88,10 @@ pub async fn render_full(
         });
         render_pass.set_pipeline(&render_pipeline);
 
-        render_pass.set_bind_group(0, &quad_material.bind_group, &[]);
-        render_pass.set_vertex_buffer(0, quad_mesh.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(quad_mesh.index_buffer.slice(..), IndexFormat::Uint16);
-        render_pass.draw_indexed(0..quad_mesh.index_buffer_len, 0, 0..1);
+        render_pass.set_bind_group(0, &material_image_input.bind_group, &[]);
+        render_pass.set_vertex_buffer(0, image_mesh.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(image_mesh.index_buffer.slice(..), IndexFormat::Uint16);
+        render_pass.draw_indexed(0..image_mesh.index_buffer_len, 0, 0..1);
     }
 
     // Render on a Texture.
@@ -105,13 +106,13 @@ pub async fn render_full(
             buffer: &output_buffer,
             layout: TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(U32_SIZE * texture_full_width),
-                rows_per_image: Some(texture_full_height),
+                bytes_per_row: Some(U32_SIZE * bulk_image_size_width),
+                rows_per_image: Some(bulk_image_size_height),
             },
         },
         Extent3d {
-            width: texture_full_width,
-            height: texture_full_height,
+            width: bulk_image_size_width,
+            height: bulk_image_size_height,
             depth_or_array_layers: 1,
         },
     );
@@ -135,7 +136,7 @@ pub async fn render_full(
         let data = buffer_slice.get_mapped_range();
 
         let buffer =
-            ImageBuffer::<Rgba<u8>, _>::from_raw(texture_full_width, texture_full_height, data)
+            ImageBuffer::<Rgba<u8>, _>::from_raw(bulk_image_size_width, bulk_image_size_height, data)
                 .unwrap();
         buffer.save(image_bulk_filepath).unwrap();
     }

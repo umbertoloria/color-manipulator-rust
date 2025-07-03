@@ -54,6 +54,8 @@ pub async fn image_processing_compute(
         reference_image_height,
         &gpu_context,
     );
+    let bulk_image_size_width = bulk_image_size;
+    let bulk_image_size_height = bulk_image_size;
     for request in requests {
         material_image_input.change_image(&request.image).unwrap();
 
@@ -76,8 +78,8 @@ pub async fn image_processing_compute(
             &render_pipeline,
             &material_image_input,
             &image_mesh,
-            bulk_image_size,
-            bulk_image_size,
+            bulk_image_size_width,
+            bulk_image_size_height,
             image_bulk_filepath,
         )
         .await;

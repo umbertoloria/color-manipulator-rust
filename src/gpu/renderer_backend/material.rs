@@ -1,15 +1,16 @@
-use crate::gpu::renderer_backend::bind_group::BindGroupBuilder;
+use crate::gpu::gpu_context::GpuContext;
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use image::RgbaImage;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    BindGroup, BindGroupLayout, Device, Extent3d, Origin3d, Queue, Sampler, TexelCopyBufferLayout,
+    BindGroup, BindGroupLayout, Extent3d, Origin3d, Sampler, TexelCopyBufferLayout,
     TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor, TextureDimension,
     TextureUsages, TextureView,
 };
 
 pub struct Material<'a> {
     pub image: &'a RgbaImage,
+    pub gpu_context: &'a GpuContext,
     pub texture: Texture,
     pub texture_view: TextureView,
     pub bind_group: BindGroup,
@@ -19,21 +20,19 @@ impl<'a> Material<'a> {
         image: &'a RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
-        device: &Device,
-        queue: &Queue,
+        gpu_context: &'a GpuContext,
         sampler: &Sampler,
     ) -> Self {
         let width = image.width();
         let height = image.height();
-        let texture_size = Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        };
 
-        let texture = device.create_texture(&TextureDescriptor {
+        let texture = gpu_context.create_texture(&TextureDescriptor {
             label: Some(label),
-            size: texture_size,
+            size: Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
@@ -43,19 +42,20 @@ impl<'a> Material<'a> {
         });
         let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
-        let bind_group = BindGroupBuilder::new(device)
+        let bind_group = gpu_context
+            .create_bind_group_builder()
             .set_layout(bind_group_layout)
             .add_material(&texture_view, &sampler)
             .build(label);
 
         let mut result = Self {
-            //
             image,
+            gpu_context,
             texture,
             texture_view,
             bind_group,
         };
-        result.write_image_to_texture(queue);
+        result.write_image_to_texture();
         result
     }
     pub fn width(&self) -> u32 {
@@ -64,14 +64,14 @@ impl<'a> Material<'a> {
     pub fn height(&self) -> u32 {
         self.image.height()
     }
-    fn write_image_to_texture(&mut self, queue: &Queue) {
+    fn write_image_to_texture(&mut self) {
         let texture = &self.texture;
         let image = self.image;
 
         let width = image.width();
         let height = image.height();
 
-        queue.write_texture(
+        self.gpu_context.write_texture(
             TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,

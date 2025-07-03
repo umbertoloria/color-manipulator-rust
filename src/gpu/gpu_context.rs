@@ -1,3 +1,4 @@
+use crate::gpu::renderer_backend::bind_group::BindGroupBuilder;
 use crate::gpu::renderer_backend::bind_group_layout::BindGroupLayoutBuilder;
 use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::pipeline::PipelineBuilder;
@@ -7,8 +8,8 @@ use image::RgbaImage;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
     AddressMode, BindGroupLayout, Buffer, BufferDescriptor, CommandBuffer, CommandEncoder,
-    CommandEncoderDescriptor, FilterMode, Instance, PollType, Sampler, SamplerDescriptor, Texture,
-    TextureDescriptor,
+    CommandEncoderDescriptor, Extent3d, FilterMode, Instance, PollType, Sampler, SamplerDescriptor,
+    TexelCopyBufferLayout, TexelCopyTextureInfo, Texture, TextureDescriptor,
 };
 
 pub async fn create_gpu_context() -> GpuContext {
@@ -51,6 +52,9 @@ impl GpuContext {
     pub fn create_bind_group_layout_builder(&self) -> BindGroupLayoutBuilder {
         BindGroupLayoutBuilder::new(&self.wgpu_wrapper.device)
     }
+    pub fn create_bind_group_builder(&self) -> BindGroupBuilder {
+        BindGroupBuilder::new(&self.wgpu_wrapper.device)
+    }
     pub fn create_sampler(&self) -> Sampler {
         let sampler_descriptor = SamplerDescriptor {
             address_mode_u: AddressMode::Repeat,
@@ -65,20 +69,13 @@ impl GpuContext {
         sampler
     }
     pub fn create_material<'a>(
-        &self,
+        &'a self,
         image: &'a RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
         sampler: &Sampler,
     ) -> Material<'a> {
-        Material::new(
-            image,
-            label,
-            &bind_group_layout,
-            &self.wgpu_wrapper.device,
-            &self.wgpu_wrapper.queue,
-            sampler,
-        )
+        Material::new(image, label, &bind_group_layout, self, sampler)
     }
     pub fn create_render_pipeline_builder(&self) -> PipelineBuilder {
         PipelineBuilder::new(&self.wgpu_wrapper.device)
@@ -104,6 +101,17 @@ impl GpuContext {
         self.wgpu_wrapper
             .device
             .create_command_encoder(&command_encoder_descriptor)
+    }
+    pub fn write_texture(
+        &self,
+        texture: TexelCopyTextureInfo,
+        data: &[u8],
+        data_layout: TexelCopyBufferLayout,
+        size: Extent3d,
+    ) {
+        self.wgpu_wrapper
+            .queue
+            .write_texture(texture, data, data_layout, size);
     }
     pub fn submit_to_queue(&self, command_buffer: CommandBuffer) {
         self.wgpu_wrapper.queue.submit(Some(command_buffer));

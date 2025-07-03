@@ -25,14 +25,13 @@ impl<'a> Material<'a> {
     ) -> Self {
         let width = image.width();
         let height = image.height();
-
         let texture_size = Extent3d {
             width,
             height,
             depth_or_array_layers: 1,
         };
 
-        let texture_descriptor = TextureDescriptor {
+        let texture = device.create_texture(&TextureDescriptor {
             label: Some(label),
             size: texture_size,
             mip_level_count: 1,
@@ -41,8 +40,36 @@ impl<'a> Material<'a> {
             format: USED_PIXEL_FORMAT,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             view_formats: &[USED_PIXEL_FORMAT],
+        });
+        let texture_view = texture.create_view(&TextureViewDescriptor::default());
+
+        let bind_group = BindGroupBuilder::new(device)
+            .set_layout(bind_group_layout)
+            .add_material(&texture_view, &sampler)
+            .build(label);
+
+        let mut result = Self {
+            //
+            image,
+            texture,
+            texture_view,
+            bind_group,
         };
-        let texture = device.create_texture(&texture_descriptor);
+        result.write_image_to_texture(queue);
+        result
+    }
+    pub fn width(&self) -> u32 {
+        self.image.width()
+    }
+    pub fn height(&self) -> u32 {
+        self.image.height()
+    }
+    fn write_image_to_texture(&mut self, queue: &Queue) {
+        let texture = &self.texture;
+        let image = self.image;
+
+        let width = image.width();
+        let height = image.height();
 
         queue.write_texture(
             TexelCopyTextureInfo {
@@ -57,28 +84,11 @@ impl<'a> Material<'a> {
                 bytes_per_row: Some(width * 4),
                 rows_per_image: Some(height),
             },
-            texture_size,
+            Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
         );
-
-        let texture_view = texture.create_view(&TextureViewDescriptor::default());
-
-        let bind_group = BindGroupBuilder::new(device)
-            .set_layout(bind_group_layout)
-            .add_material(&texture_view, &sampler)
-            .build(label);
-
-        Self {
-            //
-            image,
-            texture,
-            texture_view,
-            bind_group,
-        }
-    }
-    pub fn width(&self) -> u32 {
-        self.image.width()
-    }
-    pub fn height(&self) -> u32 {
-        self.image.height()
     }
 }

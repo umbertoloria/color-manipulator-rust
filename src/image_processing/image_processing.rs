@@ -1,8 +1,9 @@
 use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
-use crate::gpu::gpu_image_processing::gpu_image_processing;
-use crate::gpu::renderer_backend::mesh_builder::Mesh;
+use crate::gpu::gpu_image_processing::{render_full, save_image_output_and_remove_image_bulk};
+use crate::gpu::renderer_backend::mesh_builder::{Mesh, Vertex};
 use glm::Vec2;
 use image::RgbaImage;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 pub struct ImageProcessingRequest {
@@ -25,15 +26,23 @@ pub async fn image_processing_compute(
     // Benchmark
     let before = Instant::now();
 
-    // Bind Group Layout: Texture Material
+    // GPU COMPUTE
     let material_bind_group_layout = gpu_context
         .create_bind_group_layout_builder()
         .add_material()
         .build("Material Bind Group Layout");
-    let sampler = gpu_context.create_sampler();
+    let render_pipeline = gpu_context
+        .create_render_pipeline_builder()
+        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
+        .add_vertex_buffer_layout(Vertex::get_layout())
+        .add_bind_group_layout(&material_bind_group_layout)
+        .build("Render Pipeline");
 
-    // Frames: compute
     let reference_image = &requests[0].image;
+    let reference_image_width = reference_image.width();
+    let reference_image_height = reference_image.height();
+
+    let sampler = gpu_context.create_sampler();
     let mut material_image_input = gpu_context.create_material(
         reference_image,
         "Frame image",
@@ -41,23 +50,46 @@ pub async fn image_processing_compute(
         &sampler,
     );
     let (bulk_image_size, image_mesh) = create_quad_mesh_with_bulk_dimensions(
-        reference_image.width(),
-        reference_image.height(),
+        reference_image_width,
+        reference_image_height,
         &gpu_context,
     );
     for request in requests {
         material_image_input.change_image(&request.image).unwrap();
 
+        /*
+        // Render Loop
+        glfw_wrapper.enable_events_polling();
+        while !glfw_wrapper.should_close() {
+            glfw_wrapper.dispatch_events(&instance, &wgpu_wrapper.device, &glfw_render_context);
+
+            // Render here...
+
+            break;
+        }
+        */
+
         // GPU Image Processing
-        gpu_image_processing(
+        let image_bulk_filepath = &format!("{}_bulk.png", request.image_output_filepath);
+        render_full(
             &gpu_context,
-            &material_bind_group_layout,
+            &render_pipeline,
             &material_image_input,
             &image_mesh,
             bulk_image_size,
-            &request.image_output_filepath,
+            bulk_image_size,
+            image_bulk_filepath,
         )
         .await;
+
+        // Outside GPU scope
+        save_image_output_and_remove_image_bulk(
+            Path::new(image_bulk_filepath),
+            Path::new(&request.image_output_filepath),
+            reference_image_width,
+            reference_image_height,
+        )
+        .unwrap();
     }
 
     // Benchmark

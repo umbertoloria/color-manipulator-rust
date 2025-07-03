@@ -1,6 +1,6 @@
 use crate::gpu::gpu_context::GpuContext;
 use crate::gpu::renderer_backend::material::Material;
-use crate::gpu::renderer_backend::mesh_builder::{Mesh, Vertex};
+use crate::gpu::renderer_backend::mesh_builder::Mesh;
 use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use image::{ImageBuffer, ImageFormat, ImageReader, Rgba};
 use std::error::Error;
@@ -8,65 +8,14 @@ use std::fs::remove_file;
 use std::path::Path;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    BindGroupLayout, BufferAddress, BufferDescriptor, BufferUsages, Color,
-    CommandEncoderDescriptor, Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo,
-    TexelCopyBufferLayout, TexelCopyTextureInfo, TextureAspect, TextureDescriptor,
-    TextureDimension, TextureUsages,
+    BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Extent3d,
+    IndexFormat, LoadOp, MapMode, Operations, Origin3d, RenderPassColorAttachment,
+    RenderPassDescriptor, RenderPipeline, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
+    TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureUsages,
 };
 
-pub async fn gpu_image_processing(
-    gpu_context: &GpuContext,
-    material_bind_group_layout: &BindGroupLayout,
-    image_material: &Material<'_>,
-    image_mesh: &Mesh,
-    bulk_image_size: u32,
-    image_output_filepath: &str,
-) {
-    // Render Pipeline
-    let render_pipeline = gpu_context
-        .create_render_pipeline_builder()
-        .set_shader_module("src/gpu/shaders/shader.wgsl", "vs_main", "fs_main")
-        .add_vertex_buffer_layout(Vertex::get_layout())
-        .add_bind_group_layout(&material_bind_group_layout)
-        .build("Render Pipeline");
-
-    /*
-    // Render Loop
-    glfw_wrapper.enable_events_polling();
-    while !glfw_wrapper.should_close() {
-        glfw_wrapper.dispatch_events(&instance, &wgpu_wrapper.device, &glfw_render_context);
-
-        // Render here...
-
-        break;
-    }
-    */
-
-    let image_bulk_filepath = &format!("{}_bulk.png", image_output_filepath);
-    render_full(
-        gpu_context,
-        &render_pipeline,
-        &image_material,
-        image_mesh,
-        bulk_image_size,
-        bulk_image_size,
-        image_bulk_filepath,
-    )
-    .await;
-
-    // Outside GPU scope
-    save_image_output_and_remove_image_bulk(
-        Path::new(image_bulk_filepath),
-        Path::new(image_output_filepath),
-        image_material.width(),
-        image_material.height(),
-    )
-    .unwrap();
-}
-
 pub const U32_SIZE: u32 = size_of::<u32>() as u32;
-async fn render_full(
+pub async fn render_full(
     gpu_context: &GpuContext,
     render_pipeline: &RenderPipeline,
     quad_material: &Material<'_>,
@@ -198,7 +147,7 @@ async fn render_full(
     */
 }
 
-fn save_image_output_and_remove_image_bulk(
+pub fn save_image_output_and_remove_image_bulk(
     image_bulk_path: &Path,
     image_output_path: &Path,
     crop_x_right: u32,

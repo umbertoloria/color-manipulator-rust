@@ -6,8 +6,9 @@ use crate::gpu::wgpu::WGPUWrapper;
 use image::RgbaImage;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{
-    BindGroupLayout, Buffer, BufferDescriptor, CommandBuffer, CommandEncoder,
-    CommandEncoderDescriptor, Instance, PollType, Texture, TextureDescriptor,
+    AddressMode, BindGroupLayout, Buffer, BufferDescriptor, CommandBuffer, CommandEncoder,
+    CommandEncoderDescriptor, FilterMode, Instance, PollType, Sampler, SamplerDescriptor, Texture,
+    TextureDescriptor,
 };
 
 pub async fn create_gpu_context() -> GpuContext {
@@ -50,11 +51,25 @@ impl GpuContext {
     pub fn create_bind_group_layout_builder(&self) -> BindGroupLayoutBuilder {
         BindGroupLayoutBuilder::new(&self.wgpu_wrapper.device)
     }
+    pub fn create_sampler(&self) -> Sampler {
+        let sampler_descriptor = SamplerDescriptor {
+            address_mode_u: AddressMode::Repeat,
+            address_mode_v: AddressMode::Repeat,
+            address_mode_w: AddressMode::Repeat,
+            min_filter: FilterMode::Nearest,
+            mag_filter: FilterMode::Linear,
+            mipmap_filter: FilterMode::Nearest,
+            ..Default::default()
+        };
+        let sampler = self.wgpu_wrapper.device.create_sampler(&sampler_descriptor);
+        sampler
+    }
     pub fn create_material<'a>(
         &self,
         image: &'a RgbaImage,
         label: &str,
         bind_group_layout: &BindGroupLayout,
+        sampler: &Sampler,
     ) -> Material<'a> {
         Material::new(
             image,
@@ -62,6 +77,7 @@ impl GpuContext {
             &bind_group_layout,
             &self.wgpu_wrapper.device,
             &self.wgpu_wrapper.queue,
+            sampler,
         )
     }
     pub fn create_render_pipeline_builder(&self) -> PipelineBuilder {

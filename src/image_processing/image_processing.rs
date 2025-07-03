@@ -29,6 +29,7 @@ pub async fn image_processing_compute(
         .create_bind_group_layout_builder()
         .add_material()
         .build("Material Bind Group Layout");
+    let sampler = gpu_context.create_sampler();
 
     // Frames: compute
     for request in requests {
@@ -38,6 +39,7 @@ pub async fn image_processing_compute(
             &request.image,
             "Frame image",
             &material_bind_group_layout,
+            &sampler,
         );
         let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
 

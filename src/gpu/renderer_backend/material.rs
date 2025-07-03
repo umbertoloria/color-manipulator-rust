@@ -3,16 +3,15 @@ use crate::gpu::wgpu::USED_PIXEL_FORMAT;
 use image::RgbaImage;
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    AddressMode, BindGroup, BindGroupLayout, Device, Extent3d, FilterMode, Origin3d, Queue,
-    Sampler, SamplerDescriptor, TexelCopyBufferLayout, TexelCopyTextureInfo, Texture,
-    TextureAspect, TextureDescriptor, TextureDimension, TextureUsages, TextureView,
+    BindGroup, BindGroupLayout, Device, Extent3d, Origin3d, Queue, Sampler, TexelCopyBufferLayout,
+    TexelCopyTextureInfo, Texture, TextureAspect, TextureDescriptor, TextureDimension,
+    TextureUsages, TextureView,
 };
 
 pub struct Material<'a> {
     pub image: &'a RgbaImage,
     pub texture: Texture,
     pub texture_view: TextureView,
-    pub sampler: Sampler,
     pub bind_group: BindGroup,
 }
 impl<'a> Material<'a> {
@@ -22,6 +21,7 @@ impl<'a> Material<'a> {
         bind_group_layout: &BindGroupLayout,
         device: &Device,
         queue: &Queue,
+        sampler: &Sampler,
     ) -> Self {
         let width = image.width();
         let height = image.height();
@@ -62,17 +62,6 @@ impl<'a> Material<'a> {
 
         let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
-        let sampler_descriptor = SamplerDescriptor {
-            address_mode_u: AddressMode::Repeat,
-            address_mode_v: AddressMode::Repeat,
-            address_mode_w: AddressMode::Repeat,
-            min_filter: FilterMode::Nearest,
-            mag_filter: FilterMode::Linear,
-            mipmap_filter: FilterMode::Nearest,
-            ..Default::default()
-        };
-        let sampler = device.create_sampler(&sampler_descriptor);
-
         let bind_group = BindGroupBuilder::new(device)
             .set_layout(bind_group_layout)
             .add_material(&texture_view, &sampler)
@@ -83,7 +72,6 @@ impl<'a> Material<'a> {
             image,
             texture,
             texture_view,
-            sampler,
             bind_group,
         }
     }

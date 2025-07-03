@@ -92,7 +92,7 @@ pub async fn image_processing_compute(
     });
     let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
-    let mut resize_bulk_images_list = Vec::new();
+    let mut deferred_resize_bulk_file_list = Vec::new();
 
     for request in requests {
         material_image_input.change_image(&request.image).unwrap();
@@ -215,25 +215,21 @@ pub async fn image_processing_compute(
         */
 
         // Outside GPU scope
-        resize_bulk_images_list.push((
+        deferred_resize_bulk_file_list.push(DeferredResizeBulkFile {
             image_bulk_filepath,
-            Path::new(&request.image_output_filepath),
-        ));
+            image_output_filepath: request.image_output_filepath.clone(),
+        });
     }
 
     // Benchmark
     let after = Instant::now();
     let duration = after - before;
 
+    // Resizing bulk images
     println!("Resizing bulk images");
-    for (image_bulk_filepath, image_output_filepath) in resize_bulk_images_list {
-        save_image_output_and_remove_image_bulk(
-            Path::new(&image_bulk_filepath),
-            image_output_filepath,
-            reference_image_width,
-            reference_image_height,
-        )
-        .unwrap();
+    for item in deferred_resize_bulk_file_list {
+        item.save_image_output_and_remove_image_bulk(reference_image_width, reference_image_height)
+            .unwrap();
     }
 
     // RESULTS
@@ -271,22 +267,29 @@ fn create_quad_mesh_with_bulk_dimensions(
     (bulk_image_size, image_mesh)
 }
 
-fn save_image_output_and_remove_image_bulk(
-    image_bulk_path: &Path,
-    image_output_path: &Path,
-    crop_x_right: u32,
-    crop_y_bottom: u32,
-) -> Result<(), Box<dyn Error>> {
-    {
-        let image_bulk = ImageReader::open(image_bulk_path)?.decode()?;
-        let image_output = image_bulk.crop_imm(0, 0, crop_x_right, crop_y_bottom);
-        image_output.save_with_format(image_output_path, ImageFormat::Png)?;
+struct DeferredResizeBulkFile {
+    image_bulk_filepath: String,
+    image_output_filepath: String,
+}
+impl DeferredResizeBulkFile {
+    fn save_image_output_and_remove_image_bulk(
+        &self,
+        crop_x_right: u32,
+        crop_y_bottom: u32,
+    ) -> Result<(), Box<dyn Error>> {
+        let image_bulk_path = Path::new(&self.image_bulk_filepath);
+        let image_output_path = Path::new(&self.image_output_filepath);
+        {
+            let image_bulk = ImageReader::open(image_bulk_path)?.decode()?;
+            let image_output = image_bulk.crop_imm(0, 0, crop_x_right, crop_y_bottom);
+            image_output.save_with_format(image_output_path, ImageFormat::Png)?;
 
-        let output_path_str = image_output_path.to_str().unwrap();
-        println!("Resizing file \"{}\"", output_path_str);
+            let output_path_str = image_output_path.to_str().unwrap();
+            println!("Resizing file \"{}\"", output_path_str);
+        }
+
+        remove_file(Path::new(image_bulk_path))?;
+
+        Ok(())
     }
-
-    remove_file(Path::new(image_bulk_path))?;
-
-    Ok(())
 }

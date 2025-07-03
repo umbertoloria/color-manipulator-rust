@@ -92,6 +92,8 @@ pub async fn image_processing_compute(
     });
     let texture_view = texture.create_view(&TextureViewDescriptor::default());
 
+    let mut resize_bulk_images_list = Vec::new();
+
     for request in requests {
         material_image_input.change_image(&request.image).unwrap();
 
@@ -108,7 +110,6 @@ pub async fn image_processing_compute(
         */
 
         // GPU Image Processing
-        let image_bulk_filepath = &format!("{}_bulk.png", request.image_output_filepath);
 
         // RENDER
         // Render (1)
@@ -182,6 +183,8 @@ pub async fn image_processing_compute(
         // Render (3)
 
         // Save Texture on an Image.
+        let image_bulk_filepath = format!("{}_bulk.png", request.image_output_filepath);
+        println!("Painting file \"{}\"", image_bulk_filepath);
         {
             let buffer_slice = output_buffer.slice(..);
 
@@ -202,7 +205,7 @@ pub async fn image_processing_compute(
                 data,
             )
             .unwrap();
-            buffer.save(image_bulk_filepath).unwrap();
+            buffer.save(&image_bulk_filepath).unwrap();
         }
         output_buffer.unmap();
 
@@ -212,18 +215,26 @@ pub async fn image_processing_compute(
         */
 
         // Outside GPU scope
-        save_image_output_and_remove_image_bulk(
-            Path::new(image_bulk_filepath),
+        resize_bulk_images_list.push((
+            image_bulk_filepath,
             Path::new(&request.image_output_filepath),
-            reference_image_width,
-            reference_image_height,
-        )
-        .unwrap();
+        ));
     }
 
     // Benchmark
     let after = Instant::now();
     let duration = after - before;
+
+    println!("Resizing bulk images");
+    for (image_bulk_filepath, image_output_filepath) in resize_bulk_images_list {
+        save_image_output_and_remove_image_bulk(
+            Path::new(&image_bulk_filepath),
+            image_output_filepath,
+            reference_image_width,
+            reference_image_height,
+        )
+        .unwrap();
+    }
 
     // RESULTS
     let avg_fps = (requests.len() as f32 / duration.as_secs_f32()) as usize;
@@ -272,7 +283,7 @@ fn save_image_output_and_remove_image_bulk(
         image_output.save_with_format(image_output_path, ImageFormat::Png)?;
 
         let output_path_str = image_output_path.to_str().unwrap();
-        println!("Painting file \"{}\"", output_path_str);
+        println!("Resizing file \"{}\"", output_path_str);
     }
 
     remove_file(Path::new(image_bulk_path))?;

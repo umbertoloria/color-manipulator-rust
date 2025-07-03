@@ -9,8 +9,8 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 use wgpu::wgt::TextureViewDescriptor;
 use wgpu::{
-    BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Extent3d,
-    IndexFormat, LoadOp, MapMode, Operations, Origin3d, RenderPassColorAttachment,
+    Buffer, BufferAddress, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor,
+    Extent3d, IndexFormat, LoadOp, MapMode, Operations, Origin3d, RenderPassColorAttachment,
     RenderPassDescriptor, StoreOp, TexelCopyBufferInfo, TexelCopyBufferLayout,
     TexelCopyTextureInfo, TextureAspect, TextureDescriptor, TextureDimension, TextureUsages,
 };
@@ -66,14 +66,6 @@ pub async fn image_processing_compute(
     );
     let bulk_image_size_width = bulk_image_size;
     let bulk_image_size_height = bulk_image_size;
-
-    // Output Buffer
-    let output_buffer = gpu_context.create_buffer(&BufferDescriptor {
-        label: None,
-        size: (U32_SIZE * bulk_image_size_width * bulk_image_size_height) as BufferAddress,
-        usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    });
 
     // Texture View: render on Image.
     let texture = gpu_context.create_texture(&TextureDescriptor {
@@ -156,6 +148,14 @@ pub async fn image_processing_compute(
             render_pass.draw_indexed(0..image_mesh.index_buffer_len, 0, 0..1);
         }
 
+        // Output Buffer
+        let output_buffer = gpu_context.create_buffer(&BufferDescriptor {
+            label: None,
+            size: (U32_SIZE * bulk_image_size_width * bulk_image_size_height) as BufferAddress,
+            usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
         // Render on a Texture.
         command_encoder.copy_texture_to_buffer(
             TexelCopyTextureInfo {
@@ -184,30 +184,13 @@ pub async fn image_processing_compute(
 
         // Save Texture on an Image.
         let image_bulk_filepath = format!("{}_bulk.png", request.image_output_filepath);
-        println!("Painting file \"{}\"", image_bulk_filepath);
-        {
-            let buffer_slice = output_buffer.slice(..);
-
-            // NOTE: We have to create the mapping THEN device.poll() before await
-            // the future. Otherwise, the application will freeze.
-            let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
-            buffer_slice.map_async(MapMode::Read, move |result| {
-                tx.send(result).unwrap();
-            });
-            gpu_context.poll_activities_waiting();
-            rx.receive().await.unwrap().unwrap();
-
-            let data = buffer_slice.get_mapped_range();
-
-            let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(
-                bulk_image_size_width,
-                bulk_image_size_height,
-                data,
-            )
-            .unwrap();
-            buffer.save(&image_bulk_filepath).unwrap();
-        }
-        output_buffer.unmap();
+        let deferred_output_buffer = DeferredOutputBuffer {
+            output_buffer,
+            bulk_image_size_width,
+            bulk_image_size_height,
+            image_bulk_filepath,
+        };
+        deferred_output_buffer.write_on_file(&gpu_context).await;
 
         // Draw on a Window.
         /*
@@ -216,7 +199,7 @@ pub async fn image_processing_compute(
 
         // Outside GPU scope
         deferred_resize_bulk_file_list.push(DeferredResizeBulkFile {
-            image_bulk_filepath,
+            image_bulk_filepath: deferred_output_buffer.image_bulk_filepath,
             image_output_filepath: request.image_output_filepath.clone(),
         });
     }
@@ -265,6 +248,41 @@ fn create_quad_mesh_with_bulk_dimensions(
         .build();
 
     (bulk_image_size, image_mesh)
+}
+
+struct DeferredOutputBuffer {
+    output_buffer: Buffer,
+    bulk_image_size_width: u32,
+    bulk_image_size_height: u32,
+    image_bulk_filepath: String,
+}
+impl DeferredOutputBuffer {
+    pub async fn write_on_file(&self, gpu_context: &GpuContext) {
+        println!("Painting file \"{}\"", self.image_bulk_filepath);
+        {
+            let buffer_slice = self.output_buffer.slice(..);
+
+            // NOTE: We have to create the mapping THEN device.poll() before await
+            // the future. Otherwise, the application will freeze.
+            let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+            buffer_slice.map_async(MapMode::Read, move |result| {
+                tx.send(result).unwrap();
+            });
+            gpu_context.poll_activities_waiting();
+            rx.receive().await.unwrap().unwrap();
+
+            let data = buffer_slice.get_mapped_range();
+
+            let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(
+                self.bulk_image_size_width,
+                self.bulk_image_size_height,
+                data,
+            )
+            .unwrap();
+            buffer.save(&self.image_bulk_filepath).unwrap();
+        }
+        self.output_buffer.unmap();
+    }
 }
 
 struct DeferredResizeBulkFile {

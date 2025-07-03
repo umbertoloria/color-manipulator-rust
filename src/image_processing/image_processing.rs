@@ -4,14 +4,25 @@ use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::Mesh;
 use glm::Vec2;
 use image::RgbaImage;
+use std::time::{Duration, Instant};
 
 pub struct ImageProcessingRequest {
     pub image: RgbaImage,
     pub image_output_filepath: String,
 }
-pub async fn image_processing_compute(requests: &Vec<ImageProcessingRequest>) {
+pub struct ImageProcessingResults {
+    pub frames: usize,
+    pub avg_fps: usize,
+    pub duration: Duration, // excluded GPU setup
+}
+pub async fn image_processing_compute(
+    requests: &Vec<ImageProcessingRequest>,
+) -> ImageProcessingResults {
     // GPU SETUP
     let gpu_context = create_gpu_context().await;
+
+    // Benchmark
+    let before = Instant::now();
 
     // Bind Group Layout: Texture Material
     let material_bind_group_layout = gpu_context
@@ -40,6 +51,18 @@ pub async fn image_processing_compute(requests: &Vec<ImageProcessingRequest>) {
             &request.image_output_filepath,
         )
         .await;
+    }
+
+    // Benchmark
+    let after = Instant::now();
+    let duration = after - before;
+
+    // RESULTS
+    let avg_fps = (requests.len() as f32 / duration.as_secs_f32()) as usize;
+    ImageProcessingResults {
+        frames: requests.len(),
+        avg_fps,
+        duration,
     }
 }
 

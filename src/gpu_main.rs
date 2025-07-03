@@ -43,7 +43,13 @@ pub async fn gpu_main(
         );
     }
 
-    image_processing_compute(&mut requests).await;
+    let image_processing_results = image_processing_compute(&mut requests).await;
+    println!(" -> Num of frames: {}", image_processing_results.frames);
+    println!(" -> Average FPS  : {}", image_processing_results.avg_fps);
+    println!(
+        " -> Duration     : {}ms",
+        image_processing_results.duration.as_millis()
+    );
 }
 
 pub fn get_png_files_in_folder(folder_path: &str) -> std::io::Result<Vec<PathBuf>> {

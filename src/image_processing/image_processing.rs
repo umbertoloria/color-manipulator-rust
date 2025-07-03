@@ -1,6 +1,5 @@
 use crate::gpu::gpu_context::{create_gpu_context, GpuContext};
 use crate::gpu::gpu_image_processing::gpu_image_processing;
-use crate::gpu::renderer_backend::material::Material;
 use crate::gpu::renderer_backend::mesh_builder::Mesh;
 use glm::Vec2;
 use image::RgbaImage;
@@ -18,6 +17,8 @@ pub struct ImageProcessingResults {
 pub async fn image_processing_compute(
     requests: &Vec<ImageProcessingRequest>,
 ) -> ImageProcessingResults {
+    // NOTE: Assuming all images from "requests" have the same size.
+
     // GPU SETUP
     let gpu_context = create_gpu_context().await;
 
@@ -32,16 +33,20 @@ pub async fn image_processing_compute(
     let sampler = gpu_context.create_sampler();
 
     // Frames: compute
+    let reference_image = &requests[0].image;
+    let mut material_image_input = gpu_context.create_material(
+        reference_image,
+        "Frame image",
+        &material_bind_group_layout,
+        &sampler,
+    );
+    let (bulk_image_size, image_mesh) = create_quad_mesh_with_bulk_dimensions(
+        reference_image.width(),
+        reference_image.height(),
+        &gpu_context,
+    );
     for request in requests {
-        // Frame as Texture
-        let material_image_input = gpu_context.create_material(
-            //
-            &request.image,
-            "Frame image",
-            &material_bind_group_layout,
-            &sampler,
-        );
-        let (bulk_image_size, image_mesh) = create_quad_mesh(&material_image_input, &gpu_context);
+        material_image_input.change_image(&request.image).unwrap();
 
         // GPU Image Processing
         gpu_image_processing(
@@ -68,13 +73,19 @@ pub async fn image_processing_compute(
     }
 }
 
-fn create_quad_mesh(image_material: &Material, gpu_context: &GpuContext) -> (u32, Mesh) {
+fn create_quad_mesh_with_bulk_dimensions(
+    width: u32,
+    height: u32,
+    gpu_context: &GpuContext,
+) -> (u32, Mesh) {
     let block_size = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let max_size_width_height = image_material.width().max(image_material.height());
+
+    let max_size_width_height = width.max(height);
     let bulk_image_size =
         max_size_width_height + (block_size - (max_size_width_height % block_size)) % block_size;
-    let ox = image_material.width() as f32 / bulk_image_size as f32 * 2.0;
-    let oy = image_material.height() as f32 / bulk_image_size as f32 * 2.0;
+    let ox = width as f32 / bulk_image_size as f32 * 2.0;
+    let oy = height as f32 / bulk_image_size as f32 * 2.0;
+
     let image_mesh = gpu_context
         .create_shape_builder()
         .use_custom_rect(
@@ -84,5 +95,6 @@ fn create_quad_mesh(image_material: &Material, gpu_context: &GpuContext) -> (u32
             Vec2::new(-1.0, 1.0 - oy),      // Bottom-left
         )
         .build();
+
     (bulk_image_size, image_mesh)
 }

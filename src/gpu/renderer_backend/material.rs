@@ -64,16 +64,21 @@ impl<'a> Material<'a> {
     pub fn height(&self) -> u32 {
         self.image.height()
     }
+    pub fn change_image(&mut self, new_image: &'a RgbaImage) -> Result<(), &'static str> {
+        if self.image.width() != new_image.width() || self.image.height() != new_image.height() {
+            return Err("New image has different size than the original one");
+        }
+        self.image = new_image;
+        self.write_image_to_texture();
+        Ok(())
+    }
     fn write_image_to_texture(&mut self) {
-        let texture = &self.texture;
         let image = self.image;
-
         let width = image.width();
         let height = image.height();
-
         self.gpu_context.write_texture(
             TexelCopyTextureInfo {
-                texture: &texture,
+                texture: &self.texture,
                 mip_level: 0,
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
